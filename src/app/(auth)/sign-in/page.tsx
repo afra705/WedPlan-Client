@@ -1,6 +1,8 @@
 
 "use client";
-
+import { signIn } from "@/lib/auth-client";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
 import {
@@ -36,41 +38,61 @@ const SignInPage = () => {
     setSuccess("");
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
 
-    setError("");
-    setSuccess("");
+  const router = useRouter();
+ 
+const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
 
-    if (!formData.email.trim() || !formData.password) {
-      setError("Please fill in all required fields.");
+  setError("");
+  setSuccess("");
+
+  if (!formData.email.trim() || !formData.password) {
+    toast.error("Please fill in all required fields.");
+    return;
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    toast.error("Please enter a valid email address.");
+    return;
+  }
+
+  try {
+    setIsLoading(true);
+
+    const { data, error } = await signIn.email({
+      email: formData.email.trim(),
+      password: formData.password,
+      rememberMe,
+    });
+
+    console.log("Login Response:", data);
+    console.log("Login Error:", error);
+
+    if (error) {
+      toast.error(error.message || "Invalid email or password.");
       return;
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      setError("Please enter a valid email address.");
-      return;
+    if (data) {
+      toast.success("Welcome back! Login successful.");
+
+      router.replace("/");
+      router.refresh();
     }
+  } catch (err) {
+    console.error("Login Error:", err);
 
-    try {
-      setIsLoading(true);
+    toast.error(
+      err instanceof Error
+        ? err.message
+        : "Unable to sign in. Please try again."
+    );
+  } finally {
+    setIsLoading(false);
+  }
+};
 
-      // UI only: Connect credential login API here.
-      console.log({ ...formData, rememberMe });
-
-      setSuccess("Sign in form submitted successfully!");
-
-      // Role-based redirect after authentication:
-      // if (user.role === "admin") router.push("/dashboard/admin");
-      // else if (user.role === "vendor") router.push("/dashboard/vendor");
-      // else router.push("/dashboard/customer");
-
-    } catch {
-      setError("Unable to sign in. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleGoogleLogin = () => {
     setError("Google authentication is not connected yet.");

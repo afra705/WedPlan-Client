@@ -1,8 +1,9 @@
 "use client";
-
+import { toast } from "sonner";
 import { useState } from "react";
 import Link from "next/link";
-
+import { useRouter } from "next/navigation";
+import { signUp } from "@/lib/auth-client";
 import {
   Eye,
   EyeOff,
@@ -17,6 +18,7 @@ import {
   ImagePlus,
 } from "lucide-react";
 import Logo from "@/app/shared/Logo";
+
 
 const SignUpPage = () => {
   const [formData, setFormData] = useState({
@@ -59,6 +61,28 @@ const SignUpPage = () => {
     setSuccess("");
   };
 
+const uploadProfileImage = async (file: File): Promise<string> => {
+  const formData = new FormData();
+  formData.append("image", file);
+
+  const response = await fetch(
+    `https://api.imgbb.com/1/upload?key=${process.env.NEXT_PUBLIC_IMGBB_API_KEY}`,
+    {
+      method: "POST",
+      body: formData,
+    }
+  );
+
+  const result = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error("Profile image upload failed.");
+  }
+
+  return result.data.url;
+};
+const router = useRouter()
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
 
@@ -90,35 +114,67 @@ const SignUpPage = () => {
     setSuccess("");
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
 
-    setError("");
-    setSuccess("");
+  setError("");
+  setSuccess("");
 
-    if (!formData.fullName.trim()) {
-      setError("Please enter your full name.");
-      return;
+  if (!formData.fullName.trim()) {
+    toast.error("Please enter your full name.");
+    return;
+  }
+
+  if (!formData.email.trim()) {
+    toast.error("Please enter your email address.");
+    return;
+  }
+
+  if (!passwordRules.every((rule) => rule.valid)) {
+    toast.error("Please fulfill all password requirements.");
+    return;
+  }
+
+  try {
+    let imageUrl: string | undefined;
+
+    if (profileImage) {
+      imageUrl = await uploadProfileImage(profileImage);
     }
 
-    if (!formData.email.trim()) {
-      setError("Please enter your email address.");
-      return;
-    }
-
-    if (!passwordRules.every((rule) => rule.valid)) {
-      setError("Please fulfill all password requirements.");
-      return;
-    }
-
-    // UI only: Authentication and ImgBB upload are not connected.
-    console.log({
-      ...formData,
-      profileImage,
+    const { data, error } = await signUp.email({
+      name: formData.fullName.trim(),
+      email: formData.email.trim(),
+      password: formData.password,
+      image: imageUrl,
     });
 
-    setSuccess("Your registration form is ready!");
-  };
+    console.log("Signup Response:", data);
+    console.log("Signup Error:", error);
+
+    if (error) {
+      console.error("Signup Failed:", error);
+      toast.error(error.message || "Registration failed.");
+      return;
+    }
+
+    if (data) {
+      console.log("Registration Successful!");
+      toast.success("Account created successfully!");
+
+      router.replace("/sign-in");
+    }
+  } catch (err) {
+    console.error("Registration Error:", err);
+
+    toast.error(
+      err instanceof Error
+        ? err.message
+        : "Something went wrong. Please try again."
+    );
+  }
+};
+
 
   const handleGoogleSignUp = () => {
     setError("Google authentication is not connected yet.");
