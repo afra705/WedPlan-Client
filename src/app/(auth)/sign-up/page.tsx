@@ -142,12 +142,13 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
       imageUrl = await uploadProfileImage(profileImage);
     }
 
-    const { data, error } = await signUp.email({
-      name: formData.fullName.trim(),
-      email: formData.email.trim(),
-      password: formData.password,
-      image: imageUrl,
-    });
+   const { data, error } = await signUp.email({
+  name: formData.fullName.trim(),
+  email: formData.email.trim(),
+  password: formData.password,
+  image: imageUrl,
+  role: formData.role, // Add this
+});
 
     console.log("Signup Response:", data);
     console.log("Signup Error:", error);

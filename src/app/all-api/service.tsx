@@ -85,4 +85,12 @@ export const deleteService = async (id: string) => {
   return result;
 };
 
-//
+
+// Get Vendor Services
+export const getVendorServices = async (vendorId: string) => {
+  const services = await getServices();
+
+  return services.filter(
+    (service: Service) => service.vendorId === vendorId
+  );
+};

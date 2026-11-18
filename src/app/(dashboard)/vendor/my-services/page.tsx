@@ -18,12 +18,12 @@ import {
 import { toast } from "sonner";
 
 import {
-  getServices,
+  getVendorServices,
   updateService,
   deleteService,
-
 } from "@/app/all-api/service";
 
+import { authClient } from "@/lib/auth-client";
 import type { Service } from "@/type/types";
 import { uploadServiceImage } from "@/app/all-api/imgbb";
 
@@ -36,6 +36,11 @@ const categories = [
 ];
 
 const MyServicesPage = () => {
+  // Logged-in vendor session
+  const { data: session, isPending } = authClient.useSession();
+
+  const vendorId = session?.user?.id;
+
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -61,15 +66,27 @@ const MyServicesPage = () => {
     image: "",
   });
 
-  // Load services
+  // Load logged-in vendor services
   useEffect(() => {
+    if (isPending) return;
+
     const loadServices = async () => {
+      if (!vendorId) {
+        setServices([]);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+
       try {
-        const data = await getServices();
+        const data = await getVendorServices(vendorId);
         setServices(data);
       } catch (error) {
         toast.error(
-          error instanceof Error ? error.message : "Failed to load services"
+          error instanceof Error
+            ? error.message
+            : "Failed to load services"
         );
       } finally {
         setLoading(false);
@@ -77,7 +94,7 @@ const MyServicesPage = () => {
     };
 
     loadServices();
-  }, []);
+  }, [vendorId, isPending]);
 
   // Input change
   const handleChange = (
@@ -143,13 +160,11 @@ const MyServicesPage = () => {
     try {
       setUpdating(true);
 
-    
       let imageUrl = formData.image;
 
       // Upload new image to ImgBB
       if (imageFile) {
         toast.info("Uploading image...");
-
         imageUrl = await uploadServiceImage(imageFile);
       }
 
@@ -220,6 +235,41 @@ const MyServicesPage = () => {
     }
   };
 
+  // Loading
+  if (isPending || loading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="animate-spin text-[#722F3E]" size={32} />
+      </div>
+    );
+  }
+
+  // Not logged in
+  if (!session) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
+        <p className="text-[#8B7478]">Please sign in to continue.</p>
+        <Link
+          href="/sign-in"
+          className="rounded-lg bg-[#722F3E] px-5 py-3 text-sm font-semibold text-white"
+        >
+          Sign In
+        </Link>
+      </div>
+    );
+  }
+
+  // Not a vendor
+  if (session.user.role !== "vendor") {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <p className="text-[#8B7478]">
+          Only vendors can access this page.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#FAF5F0] p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-7xl">
@@ -260,11 +310,7 @@ const MyServicesPage = () => {
 
         {/* Services Table */}
         <div className="overflow-hidden rounded-xl border border-[#E7D5CC] bg-white">
-          {loading ? (
-            <div className="flex min-h-64 items-center justify-center">
-              <Loader2 className="animate-spin text-[#722F3E]" size={32} />
-            </div>
-          ) : services.length === 0 ? (
+          {services.length === 0 ? (
             <div className="flex min-h-72 flex-col items-center justify-center px-4 text-center">
               <BriefcaseBusiness size={45} className="mb-4 text-[#C6A15B]" />
 
@@ -302,7 +348,6 @@ const MyServicesPage = () => {
                 <tbody className="divide-y divide-[#E7D5CC]">
                   {services.map((service) => (
                     <tr key={service._id} className="hover:bg-[#FAF5F0]">
-
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
                           {service.image ? (
@@ -340,7 +385,7 @@ const MyServicesPage = () => {
                       </td>
 
                       <td className="px-5 py-4 text-sm font-semibold text-[#4A1F2A]">
-                        ৳{Number(service.price).toLocaleString()}
+                        ${Number(service.price).toLocaleString()}
                       </td>
 
                       <td className="px-5 py-4">
@@ -471,7 +516,7 @@ const MyServicesPage = () => {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className="mb-1.5 block text-sm font-semibold text-[#4A1F2A]">
-                    Price (৳)
+                    Price ($)
                   </label>
                   <input
                     type="number"
@@ -507,7 +552,6 @@ const MyServicesPage = () => {
                   Service Image
                 </label>
 
-                {/* Current / New Image Preview */}
                 {(imageFile || formData.image) && (
                   <div className="mb-3">
                     <img
@@ -618,7 +662,7 @@ const MyServicesPage = () => {
                 type="button"
                 onClick={handleDelete}
                 disabled={deletingId !== null}
-                className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
               >
                 {deletingId !== null ? (
                   <Loader2 size={17} className="animate-spin" />

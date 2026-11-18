@@ -316,12 +316,12 @@ const AddServicePage = () => {
 
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-[#4A1F2A]">
-                    Price (BDT) <span className="text-red-500">*</span>
+                    Price ($) <span className="text-red-500">*</span>
                   </label>
 
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-[#9B8588]">
-                      ৳
+                      $
                     </span>
 
                     <input
