@@ -7,3 +7,21 @@ export interface DashboardUser {
   image?: string | null;
   role: UserRole;
 }
+
+// service
+
+export type Service = {
+  image: string;
+  _id: string;
+  vendorId: string;
+  vendorName: string;
+  vendorEmail: string;
+  serviceName: string;
+  category: string;
+  description: string;
+  price: number;
+  location: string;
+  images: string[];
+  status: "pending" | "approved" | "rejected";
+  createdAt: string;
+};
