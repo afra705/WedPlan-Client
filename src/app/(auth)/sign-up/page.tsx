@@ -560,7 +560,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
             <p className="mt-6 text-center text-sm text-gray-500">
               Already have an account?{" "}
               <Link
-                href="/signin"
+                href="/sign-in"
                 className="font-semibold text-[#722F3E] transition hover:text-[#C6A15B]"
               >
                 Sign In
