@@ -23,6 +23,7 @@ import { signOut, useSession } from "@/lib/auth-client";
 const links = [
   { label: "Home", href: "/" },
   { label: "Browse Services", href: "/browse-services" },
+
 ];
 
 const Navbar = () => {

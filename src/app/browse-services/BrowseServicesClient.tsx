@@ -20,14 +20,27 @@ import { getFilteredServices } from "../all-api/filter";
 
 type Props = {
   services: Service[];
+  initialCategory?: string;
 };
 
-const BrowseServicesClient = ({ services }: Props) => {
+const BrowseServicesClient = ({
+  services,
+  initialCategory = "all",
+}: Props) => {
   const [search, setSearch] = useState("");
-const [categoryFilter, setCategoryFilter] = useState("all");
+const [categoryFilter, setCategoryFilter] = useState(initialCategory);
 const [locationFilter, setLocationFilter] = useState("all");
 
-const [filteredServices, setFilteredServices] = useState<Service[]>(services);
+// Start with services from the selected category (if one was passed in the URL).
+const [filteredServices, setFilteredServices] = useState<Service[]>(
+  initialCategory === "all"
+    ? services
+    : services.filter(
+        (service) =>
+          service.category?.trim().toLowerCase() ===
+          initialCategory.trim().toLowerCase()
+      )
+);
 const categories = useMemo(() => {
   return [
     ...new Set(
@@ -153,7 +166,6 @@ const clearFilters = () => {
     <select
   value={categoryFilter}
   onChange={(e) => {
-    console.log("Selected Category:", e.target.value);
     setCategoryFilter(e.target.value);
   }}
   className="w-full appearance-none rounded-xl border border-[#EDE1E4] bg-[#FCF9F9] px-4 py-3.5 text-sm text-[#6B5157] outline-none transition focus:border-[#A65B6D] focus:bg-white"
