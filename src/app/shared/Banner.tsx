@@ -19,12 +19,12 @@ import {
 // Optional: Add your wedding image URL here
 const HERO_IMAGE = "";
 
-const categories = [
-    { icon: Camera, label: "Photography" },
-    { icon: MapPin, label: "Venues" },
-    { icon: Flower2, label: "Florist" },
-    { icon: Utensils, label: "Catering" },
-];
+// const categories = [
+//     { icon: Camera, label: "Photography" },
+//     { icon: MapPin, label: "Venues" },
+//     { icon: Flower2, label: "Florist" },
+//     { icon: Utensils, label: "Catering" },
+// ];
 
 const Illustration = () => (
     <svg
@@ -256,7 +256,7 @@ const Banner = () => {
                     </div>
 
                     {/* Category Quick Links */}
-                    <div className="mt-9 flex flex-wrap gap-2.5">
+                    {/* <div className="mt-9 flex flex-wrap gap-2.5">
                         {categories.map(({ icon: Icon, label }) => (
                             <Link
                                 key={label}
@@ -267,7 +267,7 @@ const Banner = () => {
                                 {label}
                             </Link>
                         ))}
-                    </div>
+                    </div> */}
 
                     {/* Trust Information */}
                     <div className="mt-10 grid max-w-lg grid-cols-2 gap-5 border-t border-[#E7D5CC] pt-7 sm:grid-cols-3">
