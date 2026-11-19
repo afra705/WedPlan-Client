@@ -89,6 +89,7 @@ export default async function DashboardLayout({
 
         {/* Dashboard Content */}
         <div className="min-h-[calc(100vh-77px)] p-4 sm:p-6 lg:p-8">
+           
           {children}
         </div>
 

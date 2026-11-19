@@ -25,3 +25,15 @@ export type Service = {
   status: "pending" | "approved" | "rejected";
   createdAt: string;
 };
+
+export type User = {
+  id: string;
+  name: string;
+  email: string;
+  image?: string | null;
+  role?: string;
+  isBlocked?: boolean;
+  businessName?: string;
+  subscriptionPlan?: "free" | "premium";
+  subscriptionExpiresAt?: Date | string | null;
+};

@@ -25,6 +25,38 @@ export const auth = betterAuth({
     admin({
       adminRoles: ["admin"],
     }),],
+    users: {
+  additionalFields: {
+    role: {
+      type: "string",
+      required: false,
+      defaultValue: "customer",
+      input: true,
+    },
+    isBlocked: {
+      type: "boolean",
+      required: false,
+      defaultValue: false,
+      input: false,
+    },
+    businessName: {
+      type: "string",
+      required: false,
+      input: false,
+    },
+    subscriptionPlan: {
+      type: "string",
+      required: false,
+      defaultValue: "free",
+      input: false,
+    },
+    subscriptionExpiresAt: {
+      type: "date",
+      required: false,
+      input: false,
+    },
+  },
+},
   emailAndPassword: {
     enabled: true,
   },

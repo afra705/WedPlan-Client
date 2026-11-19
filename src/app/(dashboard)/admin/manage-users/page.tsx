@@ -15,6 +15,7 @@ import {
   CircleCheck,
   CircleX,
 } from "lucide-react";
+import UserDetailsButton from "./UserDetailsButton";
 
 const ManageUsersPage = async () => {
   // Get logged-in user
@@ -359,13 +360,7 @@ const ManageUsersPage = async () => {
                         <div className="flex items-center gap-2">
 
                           {/* View Details */}
-                          <button
-                            type="button"
-                            className="flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-600 transition hover:bg-blue-100"
-                          >
-                            <Eye size={14} />
-                            Details
-                          </button>
+                        <UserDetailsButton user={user} />
 
                           {/* Admin cannot be blocked */}
                           {!isAdmin && (

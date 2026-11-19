@@ -85,6 +85,28 @@ export const deleteService = async (id: string) => {
   return result;
 };
 
+export const updateServiceStatus = async (
+  id: string,
+  status: "pending" | "approved" | "rejected"
+) => {
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/services/${id}/status`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ status }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to update service status");
+  }
+
+  return response.json();
+};
+
 
 // Get Vendor Services
 export const getVendorServices = async (vendorId: string) => {

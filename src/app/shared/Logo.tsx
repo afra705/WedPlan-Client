@@ -1,12 +1,13 @@
 import React, { useId } from "react";
+import Link from "next/link";
 
 type LogoProps = {
-    className?: string;
-    showText?: boolean;
-    light?: boolean; // use on dark burgundy backgrounds (e.g. footer)
+  className?: string;
+  showText?: boolean;
+  light?: boolean;
 };
 
-/** WedPlan logo: interlocking rings crowned with a gold diamond. */
+
 export const LogoMark = ({ className = "h-11 w-11" }: { className?: string }) => {
     const id = useId().replace(/:/g, "");
     return (
@@ -62,31 +63,41 @@ export const LogoMark = ({ className = "h-11 w-11" }: { className?: string }) =>
     );
 };
 
-const Logo = ({ className = "", showText = true, light = false }: LogoProps) => {
-    return (
-        <span className={`inline-flex items-center gap-3 ${className}`}>
-            <LogoMark />
-            {showText && (
-                <span className="flex flex-col leading-none">
-                    <span
-                        className={`text-[1.65rem] font-semibold tracking-tight ${
-                            light ? "text-[#FAF5F0]" : "text-[#4A1F2A]"
-                        }`}
-                        style={{ fontFamily: "var(--font-playfair), Georgia, serif" }}
-                    >
-                        Wed<span className="text-[#C6A15B]">Plan</span>
-                    </span>
-                    <span
-                        className={`mt-1 text-[0.62rem] tracking-[0.32em] ${
-                            light ? "text-[#E7D5CC]" : "text-[#722F3E]/70"
-                        }`}
-                    >
-                        Luxury Weddings
-                    </span>
-                </span>
-            )}
+const Logo = ({
+  className = "",
+  showText = true,
+  light = false,
+}: LogoProps) => {
+  return (
+    <Link
+      href="/"
+      aria-label="WedPlan Home"
+      className={`inline-flex items-center gap-3 ${className}`}
+    >
+      <LogoMark />
+
+      {showText && (
+        <span className="flex flex-col leading-none">
+          <span
+            className={`text-[1.65rem] font-semibold tracking-tight ${
+              light ? "text-[#FAF5F0]" : "text-[#4A1F2A]"
+            }`}
+            style={{ fontFamily: "var(--font-playfair), Georgia, serif" }}
+          >
+            Wed<span className="text-[#C6A15B]">Plan</span>
+          </span>
+
+          <span
+            className={`mt-1 text-[0.62rem] tracking-[0.32em] ${
+              light ? "text-[#E7D5CC]" : "text-[#722F3E]/70"
+            }`}
+          >
+            Luxury Weddings
+          </span>
         </span>
-    );
+      )}
+    </Link>
+  );
 };
 
 export default Logo;
