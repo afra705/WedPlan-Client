@@ -11,21 +11,8 @@ export const auth = betterAuth({
     client,
   }),
 
-    user: {
-    additionalFields: {
-      role: {
-        type: "string",
-        required: false,
-        defaultValue: "customer",
-        input: true,
-      },
-    },
-  },
-  plugins: [
-    admin({
-      adminRoles: ["admin"],
-    }),],
-    users: {
+    
+user: {
   additionalFields: {
     role: {
       type: "string",

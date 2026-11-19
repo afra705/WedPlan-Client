@@ -198,11 +198,10 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 
           {/* Shared Logo */}
            {/* Logo */}
-          <Link href="/" className="relative z-10 flex items-center gap-3">
-           <div className="relative z-10">
-            <Logo light />
-          </div>
-          </Link>
+         {/* Shared Logo */}
+<div className="relative z-10">
+  <Logo light={true} />
+</div>
 
           {/* Branding Content */}
           <div className="relative z-10 my-10">

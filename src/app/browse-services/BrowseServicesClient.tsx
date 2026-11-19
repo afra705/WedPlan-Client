@@ -63,35 +63,36 @@ const BrowseServicesClient = ({ services }: Props) => {
     <section className="min-h-screen bg-[#FCF9F9] pb-20">
 
       {/* Hero Section */}
-      <div className="relative overflow-hidden bg-[#4A1F2A] px-5 py-20 text-center sm:py-24">
-        <div className="absolute -left-20 -top-20 h-72 w-72 rounded-full bg-[#A65B6D]/20 blur-3xl" />
-        <div className="absolute -bottom-28 -right-10 h-80 w-80 rounded-full bg-[#C8795B]/20 blur-3xl" />
+    <div className="relative overflow-hidden bg-[#4A1F2A] px-5 py-12 text-center sm:py-14">
+  {/* Subtle background decoration */}
+  <div className="absolute -right-16 -top-20 h-52 w-52 rounded-full bg-[#C8795B]/15 blur-3xl" />
+  <div className="absolute -bottom-24 -left-16 h-48 w-48 rounded-full bg-[#C6A15B]/10 blur-3xl" />
 
-        <div className="relative mx-auto max-w-3xl">
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[2px] text-[#F5D8DD]">
-            <Sparkles size={14} />
-            Make Your Day Special
-          </span>
+  <div className="relative mx-auto max-w-2xl">
+    <span className="inline-flex items-center gap-2 rounded-full border border-[#C6A15B]/40 bg-white/5 px-3 py-1.5 text-[11px] font-medium uppercase tracking-[1.5px] text-[#E7D5CC]">
+      <Sparkles size={13} className="text-[#C6A15B]" />
+      Discover Wedding Services
+    </span>
 
-          <h1 className="mt-6 text-4xl font-bold leading-tight text-white sm:text-5xl md:text-6xl">
-            Find the Perfect
-            <span className="block font-serif italic text-[#E7B9C2]">
-              Wedding Services
-            </span>
-          </h1>
+    <h1 className="mt-4 text-3xl font-semibold leading-tight text-white sm:text-4xl">
+      Find Your Perfect{" "}
+      <span className="font-serif italic text-[#E7B9C2]">
+        Wedding Services
+      </span>
+    </h1>
 
-          <p className="mx-auto mt-5 max-w-xl text-sm leading-7 text-white/70 sm:text-base">
-            Discover talented wedding professionals and beautiful services
-            to make your dream celebration unforgettable.
-          </p>
+    <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-white/65">
+      Explore trusted wedding professionals and make every moment of your
+      special day unforgettable.
+    </p>
 
-          <div className="mt-8 flex items-center justify-center gap-3 text-sm text-white/60">
-            <span className="h-px w-10 bg-white/30" />
-            {services.length} Available Services
-            <span className="h-px w-10 bg-white/30" />
-          </div>
-        </div>
-      </div>
+    <div className="mt-5 flex items-center justify-center gap-3 text-xs font-medium text-[#E7D5CC]">
+      <span className="h-px w-8 bg-[#C6A15B]/60" />
+      <span>{services.length} Available Services</span>
+      <span className="h-px w-8 bg-[#C6A15B]/60" />
+    </div>
+  </div>
+</div>
 
       {/* Main Content */}
       <div className="mx-auto max-w-7xl px-4 pt-12 sm:px-6 lg:px-8">

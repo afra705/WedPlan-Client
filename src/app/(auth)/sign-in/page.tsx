@@ -112,11 +112,9 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
           <div className="absolute -bottom-28 -right-20 h-80 w-80 rounded-full bg-[#722F3E]/60 blur-3xl" />
 
           {/* Logo */}
-          <Link href="/" className="relative z-10 flex items-center gap-3">
-           <div className="relative z-10">
-            <Logo light />
-          </div>
-          </Link>
+          <div className="relative z-10">
+  <Logo light={true} />
+</div>
 
           {/* Content */}
           <div className="relative z-10 my-12">

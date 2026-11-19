@@ -23,11 +23,12 @@ import { addService } from "@/app/all-api/service";
 import { uploadServiceImage } from "@/app/all-api/imgbb";
 
 const categories = [
-  "Photography & Videography",
+ "Photography & Videography",
   "Wedding Venues",
   "Decoration & Florist",
   "Catering Services",
   "Makeup & Styling",
+  "Wedding Fashion",
 ];
 
 const AddServicePage = () => {

@@ -46,6 +46,24 @@ export const getServices = async () => {
   return result;
 };
 
+
+// Get Single Service By ID
+export const getServiceById = async (
+  id: string
+): Promise<Service> => {
+  const response = await fetch(`${API_URL}/services/${id}`, {
+    cache: "no-store",
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.message || "Failed to get service");
+  }
+
+  return result;
+};
+
 // Update service
 export const updateService = async (
   id: string,

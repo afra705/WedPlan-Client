@@ -33,6 +33,7 @@ const categories = [
   "Decoration & Florist",
   "Catering Services",
   "Makeup & Styling",
+  "Wedding Fashion",
 ];
 
 const MyServicesPage = () => {
