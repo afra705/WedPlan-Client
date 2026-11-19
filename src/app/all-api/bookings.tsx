@@ -1,5 +1,5 @@
-import { Booking } from "@/type/bookings";
 
+import { Booking } from "@/type/bookings";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -13,11 +13,13 @@ export const createBooking = async (bookingData: Partial<Booking>) => {
     body: JSON.stringify(bookingData),
   });
 
+  const data = await response.json();
+
   if (!response.ok) {
-    throw new Error("Failed to create booking");
+    throw new Error(data.message || "Failed to create booking");
   }
 
-  return response.json();
+  return data;
 };
 
 // GET - Customer Bookings
@@ -49,9 +51,59 @@ export const cancelBooking = async (
     }
   );
 
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to cancel booking");
+  }
+
+  return data;
+};
+
+
+// vendorbooking
+
+
+
+// Get vendor booking requests
+export const getVendorBookingRequests = async (
+  vendorId: string
+): Promise<Booking[]> => {
+  const response = await fetch(
+    `${API_URL}/vendor-booking-requests/${vendorId}`
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch booking requests");
+  }
+
+  return response.json();
+};
+
+
+// Accept or Reject booking
+export const updateBookingStatus = async (
+  bookingId: string,
+  vendorId: string,
+  status: "accepted" | "rejected"
+) => {
+  const response = await fetch(
+    `${API_URL}/bookings/${bookingId}/status`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        vendorId,
+        status,
+      }),
+    }
+  );
+
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.message || "Failed to cancel booking");
+    throw new Error(error.message || "Failed to update booking");
   }
 
   return response.json();

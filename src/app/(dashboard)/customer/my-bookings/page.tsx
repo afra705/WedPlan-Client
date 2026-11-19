@@ -2,9 +2,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CalendarDays, MapPin, Eye, X, Loader2 } from "lucide-react";
+import { CalendarDays, Eye, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-
 import { authClient } from "@/lib/auth-client";
 import { Booking } from "@/type/bookings";
 import { cancelBooking, getMyBookings } from "@/app/all-api/bookings";
@@ -19,7 +18,7 @@ const MyBookingsPage = () => {
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [selectedBooking, setSelectedBooking] =
     useState<Booking | null>(null);
-
+    
   // Get customer bookings
   useEffect(() => {
     const fetchBookings = async () => {
@@ -45,34 +44,39 @@ const MyBookingsPage = () => {
   }, [session, isPending]);
 
   // Cancel booking
-  const handleCancel = async (bookingId: string) => {
-    const confirmCancel = window.confirm(
-      "Are you sure you want to cancel this booking?"
-    );
+const handleCancel = async (bookingId: string) => {
+  toast("Are you sure you want to cancel this booking?", {
+    action: {
+      label: "Yes, Cancel",
+      onClick: async () => {
+        try {
+          setCancellingId(bookingId);
 
-    if (!confirmCancel || !session?.user?.email) return;
+          await cancelBooking(bookingId, session!.user.email);
 
-    try {
-      setCancellingId(bookingId);
+          setBookings((previousBookings) =>
+            previousBookings.map((booking) =>
+              booking._id === bookingId
+                ? { ...booking, status: "cancelled" }
+                : booking
+            )
+          );
 
-      await cancelBooking(bookingId, session.user.email);
-
-      setBookings((previousBookings) =>
-        previousBookings.map((booking) =>
-          booking._id === bookingId
-            ? { ...booking, status: "cancelled" }
-            : booking
-        )
-      );
-
-      toast.success("Booking cancelled successfully!");
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to cancel booking.");
-    } finally {
-      setCancellingId(null);
-    }
-  };
+          toast.success("Booking cancelled successfully!");
+        } catch (error) {
+          console.error(error);
+          toast.error("Failed to cancel booking.");
+        } finally {
+          setCancellingId(null);
+        }
+      },
+    },
+    cancel: {
+      label: "No",
+      onClick: () => {},
+    },
+  });
+};
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString("en-GB", {

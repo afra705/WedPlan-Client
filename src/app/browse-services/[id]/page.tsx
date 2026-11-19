@@ -307,6 +307,7 @@ const ServiceDetailsPage = async ({ params }: Props) => {
 <BookingForm
   serviceId={service._id}
   vendorId={service.vendorId}
+  vendorEmail={service.vendorEmail}
 />
               <div className="flex items-start gap-2 border-t border-[#F0E5E7] bg-[#FCF9F9] px-6 py-4 text-[11px] leading-5 text-[#8B7478]">
                 <ShieldCheck
