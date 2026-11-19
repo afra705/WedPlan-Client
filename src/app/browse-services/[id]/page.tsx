@@ -16,6 +16,7 @@ import {
   Tag,
   UserRound,
 } from "lucide-react";
+import BookingForm from "@/app/(dashboard)/customer/my-bookings/BookingForm";
 
 type Props = {
   params: Promise<{
@@ -301,89 +302,12 @@ const ServiceDetailsPage = async ({ params }: Props) => {
                   </p>
                 </div>
               </div>
-
-              <form className="space-y-4 p-6">
-                <h2 className="text-base font-bold text-[#4A1F2A]">
-                  Book this service
-                </h2>
-
-                <div>
-                  <label
-                    htmlFor="eventDate"
-                    className="mb-2 block text-sm font-semibold text-[#4A1F2A]"
-                  >
-                    Event Date
-                  </label>
-
-                  <div className="relative">
-                    <CalendarDays
-                      size={17}
-                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#A89599]"
-                    />
-                    <input
-                      id="eventDate"
-                      type="date"
-                      className="w-full rounded-xl border border-[#EADDE0] bg-[#FCF9F9] py-3 pl-11 pr-4 text-sm text-[#4A1F2A] outline-none transition focus:border-[#B1556B] focus:bg-white focus:ring-2 focus:ring-[#B1556B]/10"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="eventLocation"
-                    className="mb-2 block text-sm font-semibold text-[#4A1F2A]"
-                  >
-                    Event Location
-                  </label>
-
-                  <div className="relative">
-                    <MapPin
-                      size={17}
-                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#A89599]"
-                    />
-                    <input
-                      id="eventLocation"
-                      type="text"
-                      placeholder="Enter event location"
-                      className="w-full rounded-xl border border-[#EADDE0] bg-[#FCF9F9] py-3 pl-11 pr-4 text-sm text-[#4A1F2A] outline-none transition placeholder:text-[#B5A3A7] focus:border-[#B1556B] focus:bg-white focus:ring-2 focus:ring-[#B1556B]/10"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="message"
-                    className="mb-2 block text-sm font-semibold text-[#4A1F2A]"
-                  >
-                    Additional Message
-                    <span className="ml-1 font-normal text-[#A99599]">
-                      (Optional)
-                    </span>
-                  </label>
-
-                  <textarea
-                    id="message"
-                    rows={3}
-                    placeholder="Write your requirements..."
-                    className="w-full resize-none rounded-xl border border-[#EADDE0] bg-[#FCF9F9] px-4 py-3 text-sm text-[#4A1F2A] outline-none transition placeholder:text-[#B5A3A7] focus:border-[#B1556B] focus:bg-white focus:ring-2 focus:ring-[#B1556B]/10"
-                  />
-                </div>
-
-                {/* UI ONLY */}
-                <button
-                  type="button"
-                  className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-br from-[#8B3A4C] via-[#722F3E] to-[#4A1F2A] px-5 py-3.5 text-sm font-semibold text-white shadow-lg ring-1 ring-[#C6A15B]/40 transition hover:-translate-y-0.5 hover:shadow-xl"
-                >
-                  <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-[#C6A15B]/35 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-                  <Sparkles size={16} className="relative text-[#E4C98A]" />
-                  <span className="relative">Book Now</span>
-                </button>
-
-                <p className="text-center text-xs text-[#A99599]">
-                  Booking functionality coming soon.
-                </p>
-              </form>
-
+{/* form  */}
+           
+<BookingForm
+  serviceId={service._id}
+  vendorId={service.vendorId}
+/>
               <div className="flex items-start gap-2 border-t border-[#F0E5E7] bg-[#FCF9F9] px-6 py-4 text-[11px] leading-5 text-[#8B7478]">
                 <ShieldCheck
                   size={15}
