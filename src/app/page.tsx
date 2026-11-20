@@ -3,6 +3,7 @@ import Navbar from './shared/Navbar';
 import Banner from './shared/Banner';
 import CategoriesSection from './categories/CategoriesSection';
 import FeaturedServices from './featured-service/FeaturedServices';
+import ChooseUsSection from './choose-us.tsx/ChooseUsSection';
 
 
 // Keep the featured section fresh whenever services are approved or updated.
@@ -13,9 +14,10 @@ const HomePage = () => {
     <div>
       <Navbar/>
       <Banner/>
-     
+
       <FeaturedServices/>
- <CategoriesSection/>
+      <CategoriesSection/>
+      <ChooseUsSection/>
     </div>
   );
 };

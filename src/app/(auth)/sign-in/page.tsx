@@ -93,11 +93,29 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
   }
 };
 
-
-  const handleGoogleLogin = () => {
-    setError("Google authentication is not connected yet.");
+const handleGoogleLogin = async () => {
+  try {
+    setError("");
     setSuccess("");
-  };
+    setIsLoading(true);
+
+    const { error } = await signIn.social({
+      provider: "google",
+      callbackURL: "/",
+    });
+
+    if (error) {
+      toast.error(error.message || "Google login failed!");
+      setIsLoading(false);
+      return;
+    }
+  } catch (error) {
+    console.error("Google Login Error:", error);
+
+    toast.error("Unable to login with Google. Please try again.");
+    setIsLoading(false);
+  }
+};
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#FAF5F0] px-4 py-10 sm:px-6">
@@ -300,11 +318,12 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
             </div>
 
             {/* Google */}
-            <button
-              type="button"
-              onClick={handleGoogleLogin}
-              className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-[#E7D5CC] bg-white text-sm font-semibold text-[#4A1F2A] transition hover:border-[#C6A15B] hover:bg-[#FAF5F0]"
-            >
+     <button
+  type="button"
+  onClick={handleGoogleLogin}
+  disabled={isLoading}
+  className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-[#E7D5CC] bg-white text-sm font-semibold text-[#4A1F2A] transition hover:border-[#C6A15B] hover:bg-[#FAF5F0] disabled:cursor-not-allowed disabled:opacity-60"
+>
               <svg viewBox="0 0 48 48" className="h-5 w-5" aria-hidden="true">
                 <path fill="#4285F4" d="M43.6 24.5c0-1.4-.1-2.8-.4-4.1H24v7.8h11a9.4 9.4 0 0 1-4.1 6.2v5.1h6.7c3.9-3.6 6-8.8 6-15z" />
                 <path fill="#34A853" d="M24 44c5.5 0 10.1-1.8 13.5-4.9l-6.7-5.1c-1.8 1.2-4.1 1.9-6.8 1.9-5.2 0-9.6-3.5-11.2-8.2H5.9v5.2A20 20 0 0 0 24 44z" />
