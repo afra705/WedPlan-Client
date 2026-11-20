@@ -7,7 +7,8 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
 export const getFilteredServices = async (
   search: string,
   category: string,
-  location: string
+  location: string,
+  sort: string
 ): Promise<Service[]> => {
 
   const params = new URLSearchParams();
@@ -24,6 +25,10 @@ export const getFilteredServices = async (
     params.append("location", location);
   }
 
+  if (sort) {
+    params.append("sort", sort);
+  }
+
   const response = await fetch(
     `${API_URL}/services?${params.toString()}`
   );
@@ -36,6 +41,9 @@ export const getFilteredServices = async (
 
   return data;
 };
+
+
+
 
 // Get services with search, category and status filters
 export const getFilteredManageServices = async (

@@ -8,6 +8,7 @@ import {
 import { auth } from "@/lib/auth";
 import { Heart, Sparkles } from "lucide-react";
 import { headers } from "next/headers";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export default async function DashboardLayout({
@@ -59,7 +60,22 @@ export default async function DashboardLayout({
                 </p>
               </div>
             </div>
+{/* Middle Navigation */}
+<nav className="hidden items-center gap-8 md:flex">
+  <Link
+    href="/"
+    className="text-sm font-semibold text-[#722F3E] transition hover:text-[#C6A15B]"
+  >
+    Home
+  </Link>
 
+  <Link
+    href="/browse-services"
+    className="text-sm font-semibold text-[#722F3E] transition hover:text-[#C6A15B]"
+  >
+    Browse Services
+  </Link>
+</nav>
             {/* Right Section */}
             <div className="flex items-center gap-3">
 

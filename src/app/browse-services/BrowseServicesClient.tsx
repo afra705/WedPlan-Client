@@ -12,6 +12,7 @@ import {
   X,
   Sparkles,
   UserRound,
+  ArrowDownWideNarrow,
 } from "lucide-react";
 
 import type { Service } from "@/type/types";
@@ -28,51 +29,60 @@ const BrowseServicesClient = ({
   initialCategory = "all",
 }: Props) => {
   const [search, setSearch] = useState("");
-const [categoryFilter, setCategoryFilter] = useState(initialCategory);
-const [locationFilter, setLocationFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState(initialCategory);
+  const [locationFilter, setLocationFilter] = useState("all");
 
-// Start with services from the selected category (if one was passed in the URL).
-const [filteredServices, setFilteredServices] = useState<Service[]>(
-  initialCategory === "all"
-    ? services
-    : services.filter(
-        (service) =>
-          service.category?.trim().toLowerCase() ===
-          initialCategory.trim().toLowerCase()
-      )
-);
-const categories = useMemo(() => {
-  return [
-    ...new Set(
-      services
-        .map((service) => service.category?.trim())
-        .filter((category) => category)
-    ),
-  ];
-}, [services]);
-useEffect(() => {
-  const fetchServices = async () => {
-    try {
-      const data = await getFilteredServices(
-        search,
-        categoryFilter,
-        locationFilter
-      );
+  // Price Sorting
+  const [sort, setSort] = useState("");
 
-      setFilteredServices(data);
-    } catch (error) {
-      console.error("Failed to fetch services:", error);
-    }
+  const [filteredServices, setFilteredServices] = useState<Service[]>(
+    initialCategory === "all"
+      ? services
+      : services.filter(
+          (service) =>
+            service.category?.trim().toLowerCase() ===
+            initialCategory.trim().toLowerCase()
+        )
+  );
+
+  const categories = useMemo(() => {
+    return [
+      ...new Set(
+        services
+          .map((service) => service.category?.trim())
+          .filter((category) => category)
+      ),
+    ];
+  }, [services]);
+
+  // Fetch services with search, filters and sorting
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const data = await getFilteredServices(
+          search,
+          categoryFilter,
+          locationFilter,
+          sort
+        );
+
+        setFilteredServices(data);
+      } catch (error) {
+        console.error("Failed to fetch services:", error);
+      }
+    };
+
+    fetchServices();
+  }, [search, categoryFilter, locationFilter, sort]);
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearch("");
+    setCategoryFilter("all");
+    setLocationFilter("all");
+    setSort("");
   };
 
-  fetchServices();
-}, [search, categoryFilter, locationFilter]);
-
-const clearFilters = () => {
-  setSearch("");
-  setCategoryFilter("all");
-  setLocationFilter("all");
-};
   return (
     <section className="min-h-screen bg-[#FCF9F9] pb-20">
 
@@ -140,7 +150,7 @@ const clearFilters = () => {
         {/* Search & Filters UI */}
         <div className="mb-10 rounded-2xl border border-[#F0E5E7] bg-white p-4 shadow-sm sm:p-5">
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
 
             {/* Search */}
             <div className="relative">
@@ -153,7 +163,7 @@ const clearFilters = () => {
               <input
                 type="text"
                 value={search}
-              onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search services or vendors..."
                 className="w-full rounded-xl border border-[#EDE1E4] bg-[#FCF9F9] py-3.5 pl-11 pr-4 text-sm text-[#4A1F2A] outline-none transition placeholder:text-[#B5A3A7] focus:border-[#A65B6D] focus:bg-white focus:ring-2 focus:ring-[#A65B6D]/10"
               />
@@ -163,21 +173,19 @@ const clearFilters = () => {
             {/* Category */}
             <div>
 
-    <select
-  value={categoryFilter}
-  onChange={(e) => {
-    setCategoryFilter(e.target.value);
-  }}
-  className="w-full appearance-none rounded-xl border border-[#EDE1E4] bg-[#FCF9F9] px-4 py-3.5 text-sm text-[#6B5157] outline-none transition focus:border-[#A65B6D] focus:bg-white"
->
-  <option value="all">All Categories</option>
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="w-full appearance-none rounded-xl border border-[#EDE1E4] bg-[#FCF9F9] px-4 py-3.5 text-sm text-[#6B5157] outline-none transition focus:border-[#A65B6D] focus:bg-white"
+              >
+                <option value="all">All Categories</option>
 
-  {categories.map((category) => (
-    <option key={category} value={category}>
-      {category}
-    </option>
-  ))}
-</select>
+                {categories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
 
             </div>
 
@@ -190,9 +198,8 @@ const clearFilters = () => {
               />
 
               <select
-           
-                            value={locationFilter}
-            onChange={(e) => setLocationFilter(e.target.value)}
+                value={locationFilter}
+                onChange={(e) => setLocationFilter(e.target.value)}
                 className="w-full appearance-none rounded-xl border border-[#EDE1E4] bg-[#FCF9F9] py-3.5 pl-10 pr-4 text-sm text-[#6B5157] outline-none transition focus:border-[#A65B6D] focus:bg-white"
               >
                 <option value="all">All Locations</option>
@@ -205,19 +212,43 @@ const clearFilters = () => {
 
             </div>
 
+            {/* Price Sorting */}
+            <div className="relative">
+
+              <ArrowDownWideNarrow
+                size={17}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-[#A89599]"
+              />
+
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value)}
+                className="w-full appearance-none rounded-xl border border-[#EDE1E4] bg-[#FCF9F9] py-3.5 pl-10 pr-4 text-sm text-[#6B5157] outline-none transition focus:border-[#A65B6D] focus:bg-white"
+              >
+                <option value="">Default Sorting</option>
+                <option value="low-to-high">
+                  Price: Low to High
+                </option>
+                <option value="high-to-low">
+                  Price: High to Low
+                </option>
+              </select>
+
+            </div>
+
           </div>
 
           {/* Clear Filters UI */}
           <div className="mt-4 flex justify-end">
 
-          <button
-  type="button"
-  onClick={clearFilters}
-  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#A65B6D] transition hover:text-[#4A1F2A]"
->
-  <X size={14} />
-  Clear all filters
-</button>
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#A65B6D] transition hover:text-[#4A1F2A]"
+            >
+              <X size={14} />
+              Clear all filters
+            </button>
 
           </div>
 

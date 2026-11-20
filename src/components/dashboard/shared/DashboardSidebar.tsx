@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 
 import { DashboardUser } from "@/type/types";
+import Logo from "@/app/shared/Logo";
 
 const sidebarItems = {
   vendor: [
@@ -77,21 +78,7 @@ const DashboardSidebar = ({ user }: { user: DashboardUser }) => {
     >
       {/* Logo */}
       <SidebarHeader className="border-b border-[#E7D5CC] bg-[#FAF5F0] px-4 py-5">
-        <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#8B3A4C] to-[#4A1F2A] text-white shadow-md shadow-[#722F3E]/20">
-            <Heart size={21} fill="currentColor" />
-          </div>
-
-          <div className="grid flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
-            <span className="text-xl font-bold tracking-tight text-[#4A1F2A]">
-              Wed<span className="text-[#722F3E]">Plan</span>
-            </span>
-
-            <span className="text-[10px] font-medium uppercase tracking-[2px] text-[#9B8183]">
-              Make it memorable
-            </span>
-          </div>
-        </Link>
+       <Logo/>
       </SidebarHeader>
 
       {/* Navigation */}
