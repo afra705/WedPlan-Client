@@ -12,7 +12,9 @@ export const auth = betterAuth({
     client,
   }),
 
-    
+     plugins: [
+    admin(),
+  ],
 user: {
   additionalFields: {
     role: {

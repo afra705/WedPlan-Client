@@ -102,6 +102,11 @@ const dashboardLink =
     }
   };
 
+  // profile update
+const profileLink =
+  session?.user?.role === "vendor"
+    ? "/vendor/profile"
+    : "/customer/profile";
   return (
     <header
       className={`sticky top-0 z-50 w-full transition-all duration-300 ${
@@ -214,15 +219,16 @@ const dashboardLink =
                         Dashboard
                       </Link>
 
-                      <Link
-                        href="/profile"
-                        onClick={() => setProfileOpen(false)}
-                        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[#4A1F2A] transition hover:bg-[#FAF5F0] hover:text-[#722F3E]"
-                      >
-                        <Settings className="h-4 w-4 text-[#C6A15B]" />
-                        Profile Settings
-                      </Link>
-                    </div>
+{session?.user?.role !== "admin" && (
+  <Link
+    href={profileLink}
+    onClick={() => setProfileOpen(false)}
+    className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[#4A1F2A] transition hover:bg-[#FAF5F0] hover:text-[#722F3E]"
+  >
+    <Settings className="h-4 w-4 text-[#C6A15B]" />
+    Profile Settings
+  </Link>
+)}            </div>
 
                     <div className="border-t border-[#E7D5CC] pt-2">
                       <button
@@ -337,15 +343,16 @@ const dashboardLink =
                     Dashboard
                   </Link>
 
-                  <Link
-                    href="/profile"
-                    onClick={closeMenu}
-                    className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-[#4A1F2A] hover:bg-[#FAF5F0]"
-                  >
-                    <Settings className="h-4 w-4 text-[#C6A15B]" />
-                    Profile Settings
-                  </Link>
-
+{session?.user?.role !== "admin" && (
+  <Link
+    href={profileLink}
+    onClick={() => setProfileOpen(false)}
+    className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[#4A1F2A] transition hover:bg-[#FAF5F0] hover:text-[#722F3E]"
+  >
+    <Settings className="h-4 w-4 text-[#C6A15B]" />
+    Profile Settings
+  </Link>
+)}
                   <button
                     onClick={handleLogout}
                     disabled={isLoggingOut}

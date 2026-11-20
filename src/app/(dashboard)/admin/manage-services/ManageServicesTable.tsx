@@ -1,114 +1,152 @@
+
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import {
   Search,
   Filter,
-
   User,
-
   Eye,
   CheckCircle2,
   XCircle,
-  Trash2,
   Clock,
   BriefcaseBusiness,
+  X,
 } from "lucide-react";
 
 import type { Service } from "@/type/types";
-import { updateServiceStatus } from "@/app/all-api/service";
+import {
+  updateServiceStatus,
+
+} from "@/app/all-api/service";
 import { toast } from "sonner";
 import DeleteServices from "./DeleteServices";
+import { getFilteredManageServices } from "@/app/all-api/filter";
 
 type Props = {
   services: Service[];
 };
 
 const ManageServicesTable = ({ services: initialServices }: Props) => {
-  const [services, setServices] = useState(initialServices);
+  const [services, setServices] = useState<Service[]>(initialServices);
 
+  // Search and filter states
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
 
+  const [loading, setLoading] = useState(false);
+
+  // Modal and status update states
+  const [selectedService, setSelectedService] =
+    useState<Service | null>(null);
+
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
- const handleStatusChange = async (
-  id: string,
-  status: "pending" | "approved" | "rejected",
-) => {
-  // Check current service status
-  const currentService = services.find(
-    (service) => service._id === id,
+  // Categories from initial services
+  const categories = Array.from(
+    new Set(initialServices.map((service) => service.category).filter(Boolean))
   );
 
-  if (!currentService) {
-    toast.error("Service not found or already deleted!");
-    return;
-  }
+  // Fetch services from backend
+  useEffect(() => {
+    const fetchFilteredServices = async () => {
+      try {
+        setLoading(true);
 
-  // Prevent double click while updating
-  if (updatingId === id) {
-    return;
-  }
+        const data = await getFilteredManageServices(
+          search,
+          categoryFilter,
+          statusFilter
+        );
 
-  // Check if status is already the same
-  if (currentService.status === status) {
-    toast.info(`This service is already ${status}!`);
-    return;
-  }
+        setServices(data);
+      } catch (error) {
+        console.error("Failed to fetch services:", error);
+        toast.error("Failed to load services!");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  try {
-    setUpdatingId(id);
+    // Debounce search request
+    const timer = setTimeout(() => {
+      fetchFilteredServices();
+    }, 300);
 
-    await updateServiceStatus(id, status);
+    return () => clearTimeout(timer);
+  }, [search, categoryFilter, statusFilter]);
 
-    setServices((previousServices) =>
-      previousServices.map((service) =>
-        service._id === id ? { ...service, status } : service,
-      ),
+  // Update Service Status
+  const handleStatusChange = async (
+    id: string,
+    status: "pending" | "approved" | "rejected"
+  ) => {
+    const currentService = services.find(
+      (service) => service._id === id
     );
 
-    toast.success(`Service ${status} successfully!`);
-  } catch (error) {
-    console.error("Status update error:", error);
-    toast.error("Failed to update service status!");
-  } finally {
-    setUpdatingId(null);
-  }
-};
+    if (!currentService) {
+      toast.error("Service not found or already deleted!");
+      return;
+    }
 
-  // Search and filter services
-  const filteredServices = services.filter((service) => {
-    const searchMatch =
-      service.serviceName.toLowerCase().includes(search.toLowerCase()) ||
-      service.vendorName.toLowerCase().includes(search.toLowerCase()) ||
-      service.vendorEmail.toLowerCase().includes(search.toLowerCase());
+    if (updatingId === id) return;
 
-    const statusMatch =
-      statusFilter === "all" || service.status === statusFilter;
+    if (currentService.status === status) {
+      toast.info(`This service is already ${status}!`);
+      return;
+    }
 
-    const categoryMatch =
-      categoryFilter === "all" || service.category === categoryFilter;
+    try {
+      setUpdatingId(id);
 
-    return searchMatch && statusMatch && categoryMatch;
-  });
+      await updateServiceStatus(id, status);
 
-  const categories = Array.from(
-    new Set(services.map((service) => service.category)),
-  );
+      toast.success(`Service ${status} successfully!`);
 
+      // Refresh filtered services from backend
+      const data = await getFilteredManageServices(
+        search,
+        categoryFilter,
+        statusFilter
+      );
+
+      setServices(data);
+
+      // Update selected service in modal
+      setSelectedService((previous) =>
+        previous?._id === id
+          ? { ...previous, status }
+          : previous
+      );
+    } catch (error) {
+      console.error("Status update error:", error);
+      toast.error("Failed to update service status!");
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  // Statistics
   const pendingCount = services.filter(
-    (service) => service.status === "pending",
+    (service) => service.status === "pending"
+  ).length;
+
+  const approvedCount = services.filter(
+    (service) => service.status === "approved"
   ).length;
 
   return (
     <div className="space-y-6">
+
       {/* Statistics */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+
         <div className="rounded-xl border border-[#F0E5E7] bg-white p-5">
           <p className="text-sm text-[#8B7478]">Total Services</p>
+
           <h3 className="mt-2 text-2xl font-bold text-[#4A1F2A]">
             {services.length}
           </h3>
@@ -116,6 +154,7 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
 
         <div className="rounded-xl border border-[#F0E5E7] bg-white p-5">
           <p className="text-sm text-[#8B7478]">Pending Review</p>
+
           <h3 className="mt-2 text-2xl font-bold text-orange-500">
             {pendingCount}
           </h3>
@@ -123,16 +162,22 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
 
         <div className="rounded-xl border border-[#F0E5E7] bg-white p-5">
           <p className="text-sm text-[#8B7478]">Approved Services</p>
+
           <h3 className="mt-2 text-2xl font-bold text-green-600">
-            {services.filter((service) => service.status === "approved").length}
+            {approvedCount}
           </h3>
         </div>
+
       </div>
 
-      {/* View All Submitted Services */}
+      {/* Manage Services Table */}
       <div className="rounded-2xl border border-[#F0E5E7] bg-white shadow-sm">
+
+        {/* Header */}
         <div className="border-b border-[#F0E5E7] p-5">
+
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+
             <div>
               <h3 className="text-xl font-bold text-[#4A1F2A]">
                 View All Submitted Services
@@ -144,14 +189,17 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
             </div>
 
             <span className="w-fit rounded-full bg-[#F8EDF0] px-4 py-2 text-sm font-semibold text-[#8B354B]">
-              {filteredServices.length} Services
+              {services.length} Services
             </span>
+
           </div>
 
-          {/* Search and Filter - UI */}
+          {/* Search and Filters */}
           <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
+
             {/* Search */}
-            <div className="relative md:col-span-1">
+            <div className="relative">
+
               <Search
                 size={18}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A89599]"
@@ -159,15 +207,17 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
 
               <input
                 type="text"
-                placeholder="Search service or vendor..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search service or vendor..."
                 className="w-full rounded-xl border border-[#EDE1E4] py-3 pl-10 pr-4 text-sm outline-none transition focus:border-[#A65B6D]"
               />
+
             </div>
 
             {/* Status Filter */}
             <div className="relative">
+
               <Filter
                 size={17}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A89599]"
@@ -183,10 +233,12 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
                 <option value="approved">Approved</option>
                 <option value="rejected">Rejected</option>
               </select>
+
             </div>
 
             {/* Category Filter */}
             <div>
+
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
@@ -199,14 +251,30 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
                     {category}
                   </option>
                 ))}
+
               </select>
+
             </div>
+
           </div>
+
         </div>
 
         {/* Table */}
-        {filteredServices.length === 0 ? (
+        {loading ? (
+
           <div className="py-16 text-center">
+            <div className="mx-auto h-9 w-9 animate-spin rounded-full border-4 border-[#F0E5E7] border-t-[#8B354B]" />
+
+            <p className="mt-3 text-sm text-[#8B7478]">
+              Loading services...
+            </p>
+          </div>
+
+        ) : services.length === 0 ? (
+
+          <div className="py-16 text-center">
+
             <BriefcaseBusiness className="mx-auto h-12 w-12 text-[#C9B5BA]" />
 
             <h3 className="mt-3 font-semibold text-[#4A1F2A]">
@@ -214,37 +282,48 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
             </h3>
 
             <p className="mt-1 text-sm text-[#8B7478]">
-              Try changing your search or filter.
+              No services match your search or filters.
             </p>
+
           </div>
+
         ) : (
+
           <div className="overflow-x-auto">
+
             <table className="w-full min-w-[1050px] text-left">
+
               <thead>
                 <tr className="border-b border-[#F0E5E7] bg-[#FCF9F9] text-xs uppercase tracking-wider text-[#8B7478]">
                   <th className="px-5 py-4">Service</th>
                   <th className="px-5 py-4">Vendor</th>
                   <th className="px-5 py-4">Category</th>
                   <th className="px-5 py-4">Price</th>
-                  {/* <th className="px-5 py-4">Date</th> */}
                   <th className="px-5 py-4">Status</th>
                   <th className="px-5 py-4">Actions</th>
                 </tr>
               </thead>
 
               <tbody>
-                {filteredServices.map((service) => {
+
+                {services.map((service) => {
+
                   const image = service.image || service.images?.[0];
 
                   return (
+
                     <tr
                       key={service._id}
                       className="border-b border-[#F5ECEE] transition hover:bg-[#FDF9FA]"
                     >
+
                       {/* Service */}
                       <td className="px-5 py-4">
+
                         <div className="flex items-center gap-3">
+
                           <div className="relative h-14 w-16 shrink-0 overflow-hidden rounded-lg bg-[#F8EDF0]">
+
                             {image ? (
                               <Image
                                 src={image}
@@ -256,9 +335,11 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
                             ) : (
                               <BriefcaseBusiness className="m-auto mt-4 h-6 w-6 text-[#C9B5BA]" />
                             )}
+
                           </div>
 
                           <div className="max-w-[180px]">
+
                             <p className="font-semibold text-[#4A1F2A]">
                               {service.serviceName}
                             </p>
@@ -266,16 +347,21 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
                             <p className="mt-1 line-clamp-1 text-xs text-[#8B7478]">
                               {service.description}
                             </p>
+
                           </div>
+
                         </div>
                       </td>
 
                       {/* Vendor */}
                       <td className="px-5 py-4">
+
                         <div className="flex items-center gap-2">
+
                           <User size={16} className="text-[#A65B6D]" />
 
                           <div>
+
                             <p className="text-sm font-medium text-[#4A1F2A]">
                               {service.vendorName || "Unknown"}
                             </p>
@@ -283,37 +369,33 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
                             <p className="text-xs text-[#8B7478]">
                               {service.vendorEmail}
                             </p>
+
                           </div>
+
                         </div>
                       </td>
 
                       {/* Category */}
                       <td className="px-5 py-4">
+
                         <span className="rounded-lg bg-[#F8EDF0] px-3 py-1.5 text-xs font-medium text-[#8B354B]">
                           {service.category}
                         </span>
+
                       </td>
 
                       {/* Price */}
                       <td className="px-5 py-4">
+
                         <p className="font-semibold text-[#4A1F2A]">
-                          ${service.price.toLocaleString()}
+                          ${Number(service.price || 0).toLocaleString()}
                         </p>
+
                       </td>
-
-                      {/* Date */}
-                      {/* <td className="px-5 py-4">
-                        <div className="flex items-center gap-2 text-sm text-[#8B7478]">
-                          <CalendarDays size={15} />
-
-                          {new Date(service.createdAt).toLocaleDateString(
-                            "en-GB"
-                          )}
-                        </div>
-                      </td> */}
 
                       {/* Status */}
                       <td className="px-5 py-4">
+
                         <span
                           className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold capitalize ${
                             service.status === "approved"
@@ -323,6 +405,7 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
                                 : "bg-orange-50 text-orange-600"
                           }`}
                         >
+
                           {service.status === "approved" ? (
                             <CheckCircle2 size={14} />
                           ) : service.status === "rejected" ? (
@@ -332,72 +415,247 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
                           )}
 
                           {service.status}
+
                         </span>
+
                       </td>
 
                       {/* Actions */}
                       <td className="px-5 py-4">
+
                         <div className="flex items-center gap-2">
+
+                          {/* View */}
                           <button
                             type="button"
                             title="View Service"
-                            className="rounded-lg border border-[#EDE1E4] p-2 text-[#8B354B] opacity-1000"
+                            onClick={() => setSelectedService(service)}
+                            className="rounded-lg border border-[#EDE1E4] p-2 text-[#8B354B] transition hover:bg-[#F8EDF0]"
                           >
                             <Eye size={16} />
                           </button>
 
+                          {/* Approve */}
                           <button
                             type="button"
                             title="Approve Service"
                             onClick={() =>
                               handleStatusChange(service._id, "approved")
                             }
-                            disabled={service.status === "approved"}
-                            className="rounded-lg border border-green-100 p-2 text-green-600 hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-1000"
+                            disabled={
+                              service.status === "approved" ||
+                              updatingId === service._id
+                            }
+                            className="rounded-lg border border-green-100 p-2 text-green-600 transition hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-40"
                           >
                             <CheckCircle2 size={16} />
                           </button>
 
+                          {/* Reject */}
                           <button
                             type="button"
                             title="Reject Service"
                             onClick={() =>
                               handleStatusChange(service._id, "rejected")
                             }
-                            disabled={service.status === "rejected"}
-                            className="rounded-lg border border-red-100 p-2 text-red-500 opacity-1000"
+                            disabled={
+                              service.status === "rejected" ||
+                              updatingId === service._id
+                            }
+                            className="rounded-lg border border-red-100 p-2 text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
                           >
                             <XCircle size={16} />
                           </button>
 
+                          {/* Delete */}
                           <DeleteServices
-                                serviceId={service._id}
-                                serviceName={service.serviceName}
-                                onDeleted={(id) => {
-                                    setServices((previousServices) =>
-                                    previousServices.filter(
-                                        (item) => item._id !== id
-                                    )
-                                    );
-                                }}
-                                />
+                            serviceId={service._id}
+                            serviceName={service.serviceName}
+                            onDeleted={(id) => {
+                              setServices((previousServices) =>
+                                previousServices.filter(
+                                  (item) => item._id !== id
+                                )
+                              );
+
+                              setSelectedService((previous) =>
+                                previous?._id === id ? null : previous
+                              );
+                            }}
+                          />
+
                         </div>
+
                       </td>
+
                     </tr>
+
                   );
                 })}
+
               </tbody>
+
             </table>
+
           </div>
+
         )}
 
         {/* Footer */}
         <div className="border-t border-[#F0E5E7] px-5 py-4">
+
           <p className="text-xs text-[#8B7478]">
-            Showing {filteredServices.length} of {services.length} services
+            Showing {services.length} services
           </p>
+
         </div>
+
       </div>
+
+      {/* View Service Modal */}
+      {selectedService && (
+
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setSelectedService(null)}
+        >
+
+          <div
+            className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-[#F0E5E7] px-6 py-4">
+
+              <h2 className="text-xl font-bold text-[#4A1F2A]">
+                Service Details
+              </h2>
+
+              <button
+                type="button"
+                onClick={() => setSelectedService(null)}
+                className="rounded-lg p-2 text-[#8B7478] transition hover:bg-[#F8EDF0]"
+              >
+                <X size={20} />
+              </button>
+
+            </div>
+
+            {/* Body */}
+            <div className="max-h-[75vh] space-y-4 overflow-y-auto p-6">
+
+              {/* Service Image */}
+              <div className="relative h-52 w-full overflow-hidden rounded-xl bg-[#F8EDF0]">
+
+                {(selectedService.image || selectedService.images?.[0]) ? (
+
+                  <Image
+                    src={
+                      selectedService.image ||
+                      selectedService.images?.[0] ||
+                      ""
+                    }
+                    alt={selectedService.serviceName}
+                    fill
+                    unoptimized
+                    className="object-cover"
+                  />
+
+                ) : (
+
+                  <div className="flex h-full items-center justify-center text-[#C9B5BA]">
+                    <BriefcaseBusiness size={40} />
+                  </div>
+
+                )}
+
+              </div>
+
+              {/* Service Name & Description */}
+              <div>
+
+                <h3 className="text-xl font-bold text-[#4A1F2A]">
+                  {selectedService.serviceName}
+                </h3>
+
+                <p className="mt-1 text-sm text-[#8B7478]">
+                  {selectedService.description}
+                </p>
+
+              </div>
+
+              {/* Details */}
+              <div className="grid grid-cols-2 gap-4">
+
+                <div className="rounded-xl bg-[#FCF9F9] p-4">
+                  <p className="text-xs text-[#8B7478]">Category</p>
+
+                  <p className="mt-1 font-semibold text-[#4A1F2A]">
+                    {selectedService.category}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-[#FCF9F9] p-4">
+                  <p className="text-xs text-[#8B7478]">Price</p>
+
+                  <p className="mt-1 font-semibold text-[#4A1F2A]">
+                    ${Number(selectedService.price || 0).toLocaleString()}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-[#FCF9F9] p-4">
+                  <p className="text-xs text-[#8B7478]">Vendor Name</p>
+
+                  <p className="mt-1 font-semibold text-[#4A1F2A]">
+                    {selectedService.vendorName || "Unknown"}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-[#FCF9F9] p-4">
+                  <p className="text-xs text-[#8B7478]">Vendor Email</p>
+
+                  <p className="mt-1 break-all text-sm font-semibold text-[#4A1F2A]">
+                    {selectedService.vendorEmail}
+                  </p>
+                </div>
+
+              </div>
+
+              {/* Status */}
+              <div className="rounded-xl bg-[#FCF9F9] p-4">
+
+                <p className="text-xs text-[#8B7478]">
+                  Service Status
+                </p>
+
+                <p className="mt-1 font-semibold capitalize text-[#8B354B]">
+                  {selectedService.status}
+                </p>
+
+              </div>
+
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-[#F0E5E7] p-5">
+
+              <button
+                type="button"
+                onClick={() => setSelectedService(null)}
+                className="w-full rounded-xl bg-[#4A1F2A] py-3 font-semibold text-white transition hover:bg-[#612A3A]"
+              >
+                Close
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
+
     </div>
   );
 };
