@@ -30,7 +30,7 @@ const SignUpPage = () => {
     fullName: "",
     email: "",
     password: "",
-    role: "customer",
+    accountType: "customer",
   });
 
   const [profileImage, setProfileImage] = useState<File | null>(null);
@@ -118,11 +118,11 @@ const SignUpPage = () => {
     setSuccess("");
   };
 
-  // Handle role selection
-  const handleRoleChange = (role: string) => {
+  // Handle account type selection
+  const handleAccountTypeChange = (accountType: string) => {
     setFormData((prev) => ({
       ...prev,
-      role,
+      accountType,
     }));
 
     setError("");
@@ -167,7 +167,7 @@ const SignUpPage = () => {
         email: formData.email.trim(),
         password: formData.password,
         image: imageUrl,
-        role: formData.role,
+        accountType: formData.accountType,
       });
 
       console.log("Signup Response:", data);
@@ -207,7 +207,7 @@ const handleGoogleSignUp = async () => {
       provider: "google",
       callbackURL: "/",
       additionalData: {
-        role: formData.role,
+        accountType: formData.accountType,
       },
     });
 
@@ -352,17 +352,17 @@ const handleGoogleSignUp = async () => {
 
                   <button
                     type="button"
-                    onClick={() => handleRoleChange("vendor")}
-                    aria-pressed={formData.role === "vendor"}
+                    onClick={() => handleAccountTypeChange("vendor")}
+                    aria-pressed={formData.accountType === "vendor"}
                     className={`flex items-center gap-3 rounded-xl border p-3 text-left transition ${
-                      formData.role === "vendor"
+                      formData.accountType === "vendor"
                         ? "border-[#722F3E] bg-[#722F3E]/5 ring-1 ring-[#722F3E]"
                         : "border-gray-200 hover:border-[#C6A15B]"
                     }`}
                   >
                     <div
                       className={`rounded-lg p-2 ${
-                        formData.role === "vendor"
+                        formData.accountType === "vendor"
                           ? "bg-[#722F3E] text-white"
                           : "bg-[#FAF5F0] text-[#722F3E]"
                       }`}
@@ -383,17 +383,17 @@ const handleGoogleSignUp = async () => {
 
                   <button
                     type="button"
-                    onClick={() => handleRoleChange("customer")}
-                    aria-pressed={formData.role === "customer"}
+                    onClick={() => handleAccountTypeChange("customer")}
+                    aria-pressed={formData.accountType === "customer"}
                     className={`flex items-center gap-3 rounded-xl border p-3 text-left transition ${
-                      formData.role === "customer"
+                      formData.accountType === "customer"
                         ? "border-[#722F3E] bg-[#722F3E]/5 ring-1 ring-[#722F3E]"
                         : "border-gray-200 hover:border-[#C6A15B]"
                     }`}
                   >
                     <div
                       className={`rounded-lg p-2 ${
-                        formData.role === "customer"
+                        formData.accountType === "customer"
                           ? "bg-[#722F3E] text-white"
                           : "bg-[#FAF5F0] text-[#722F3E]"
                       }`}

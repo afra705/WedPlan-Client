@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner";
 
 import { authClient } from "@/lib/auth-client";
+import { getDashboardPath, isVendor } from "@/lib/roles";
 import {
   addService,
   getVendorServices,
@@ -45,11 +46,14 @@ const AddServicePage = () => {
   // User information
   const user = session?.user as
     | {
-        role?: string;
+        role?: string | null;
+        accountType?: string | null;
         subscriptionPlan?: string;
       }
     | undefined;
 
+  const isVendorUser = isVendor(user);
+  const dashboardPath = getDashboardPath(user);
   const isPremium = user?.subscriptionPlan === "premium";
 
   // Subscription states
@@ -78,17 +82,17 @@ const AddServicePage = () => {
       return;
     }
 
-    if (user?.role !== "vendor") {
+    if (!isVendorUser) {
       toast.error("Only vendors can add services.");
-      router.replace("/dashboard");
+      router.replace(dashboardPath);
     }
-  }, [session, isPending, user?.role, router]);
+  }, [session, isPending, isVendorUser, dashboardPath, router]);
 
   // Check Free Plan service limit
   useEffect(() => {
     if (isPending) return;
 
-    if (!session?.user || user?.role !== "vendor") {
+    if (!session?.user || !isVendorUser) {
       setCheckingLimit(false);
       return;
     }
@@ -134,7 +138,7 @@ const AddServicePage = () => {
   }, [
     isPending,
     session,
-    user?.role,
+    isVendorUser,
     isPremium,
     router,
   ]);
@@ -312,7 +316,7 @@ const AddServicePage = () => {
     isPending ||
     checkingLimit ||
     !session ||
-    user?.role !== "vendor"
+    !isVendorUser
   ) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">

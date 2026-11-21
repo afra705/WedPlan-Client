@@ -1,11 +1,14 @@
 
-export type UserRole = "vendor" | "customer" | "admin";
+import type { AccountType } from "@/lib/roles";
 
 export interface DashboardUser {
   name: string;
   email: string;
   image?: string | null;
-  role: UserRole;
+  /** Better Auth admin-plugin role. Only "admin" grants admin access. */
+  role?: string | null;
+  /** WedPlan account type. */
+  accountType?: AccountType | null;
 }
 
 // service
@@ -31,9 +34,13 @@ export type User = {
   name: string;
   email: string;
   image?: string | null;
-  role?: string;
+  /** Better Auth admin-plugin role. Only "admin" grants admin access. */
+  role?: string | null;
+  /** WedPlan account type. */
+  accountType?: string | null;
   isBlocked?: boolean;
+  banned?: boolean;
   businessName?: string;
-  subscriptionPlan?: "free" | "premium";
+  subscriptionPlan?: "free" | "premium" | string | null;
   subscriptionExpiresAt?: Date | string | null;
 };

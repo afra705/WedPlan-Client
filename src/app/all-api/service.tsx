@@ -114,6 +114,8 @@ export const updateServiceStatus = async (
       headers: {
         "Content-Type": "application/json",
       },
+      // Admin action: the backend must verify the admin session.
+      credentials: "include",
       body: JSON.stringify({ status }),
     }
   );

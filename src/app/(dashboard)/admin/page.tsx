@@ -13,6 +13,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/app/all-api/get-current-user";
 import { getServices } from "@/app/all-api/service";
 import { getUserStats } from "@/app/all-api/user";
+import { getDashboardPath, isAdmin } from "@/lib/roles";
 import { Service } from "@/type/types";
 
 
@@ -22,11 +23,11 @@ const AdminOverviewPage = async () => {
   const user = await getCurrentUser();
 
   if (!user) {
-    redirect("/login");
+    redirect("/sign-in");
   }
 
-  if (user.role !== "admin") {
-    redirect("/");
+  if (!isAdmin(user)) {
+    redirect(getDashboardPath(user));
   }
 
   // Dashboard data

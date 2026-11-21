@@ -12,6 +12,7 @@ import { getVendorServices } from "@/app/all-api/service";
 
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/app/all-api/get-current-user";
+import { getDashboardPath, isVendor } from "@/lib/roles";
 
 type Service = {
   _id: string;
@@ -28,10 +29,8 @@ const VendorOverviewPage = async () => {
     redirect("/sign-in");
   }
 
-  const role = (user as typeof user & { role?: string }).role;
-
-  if (role !== "vendor") {
-    redirect("/dashboard");
+  if (!isVendor(user)) {
+    redirect(getDashboardPath(user));
   }
 
   // Get only logged-in vendor's services

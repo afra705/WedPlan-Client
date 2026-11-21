@@ -6,7 +6,6 @@ import FeaturedServices from './featured-service/FeaturedServices';
 import ChooseUsSection from './choose-us.tsx/ChooseUsSection';
 
 
-// Keep the featured section fresh whenever services are approved or updated.
 export const dynamic = "force-dynamic";
 
 const HomePage = () => {

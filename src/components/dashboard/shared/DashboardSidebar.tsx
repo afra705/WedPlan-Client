@@ -33,6 +33,10 @@ import {
 
 import { DashboardUser } from "@/type/types";
 import Logo from "@/app/shared/Logo";
+import {
+  getDashboardRole,
+  getProfilePath,
+} from "@/lib/roles";
 
 const sidebarItems = {
   vendor: [
@@ -61,7 +65,10 @@ const sidebarItems = {
 const DashboardSidebar = ({ user }: { user: DashboardUser }) => {
   const pathname = usePathname();
 
-  const items = sidebarItems[user.role] ?? [];
+  const dashboardRole = getDashboardRole(user);
+  const profileHref = getProfilePath(user);
+
+  const items = sidebarItems[dashboardRole] ?? [];
 
   const initials =
     user.name
@@ -164,7 +171,7 @@ const DashboardSidebar = ({ user }: { user: DashboardUser }) => {
               className="h-auto rounded-xl p-2 transition hover:bg-[#E7D5CC]/50"
             >
               <Link
-                href={`/${user.role}/profile`}
+                href={profileHref}
                 className="flex items-center gap-3"
               >
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#C6A15B]/50 bg-[#E7D5CC] text-sm font-bold text-[#722F3E]">
@@ -185,7 +192,7 @@ const DashboardSidebar = ({ user }: { user: DashboardUser }) => {
                   </span>
 
                   <span className="truncate text-[11px] capitalize text-[#927D7F]">
-                    {user.role} Account
+                    {dashboardRole} Account
                   </span>
                 </div>
 

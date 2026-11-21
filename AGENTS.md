@@ -15,19 +15,17 @@ Wedding-vendor marketplace frontend: Next.js 16.4.6 App Router + React 19 (React
 ## Commands
 
 - `npm run dev` — dev server on :3000. `next dev` rewrites the Next.js block above; leave it in the tree.
-- `npm run build` — production build, then TypeScript; currently fails (see below).
+- `npm run build` — production build, then TypeScript; currently passes.
 - `npm run lint` — `eslint`; 2 pre-existing errors, both `react-hooks/set-state-in-effect` in `src/components/ui/carousel.tsx` and `src/hooks/use-mobile.ts` (shadcn-generated). Don't attribute them to your change.
 - `npx tsc --noEmit` — standalone typecheck; includes generated `.next/types` and `.next/dev/types`.
 - No test runner, test script, CI workflow, pre-commit hook, or codegen exists. Don't invent `npm test`.
 
 ## Known broken state (check before "fixing" something else)
 
-- `src/app/(dashboard)/vendor/update-service/[id]/page.tsx` is 0 bytes, so it is not a module (TS2306). This is what breaks `npm run build` / `tsc`; it needs a default-exported component.
-- `src/app/(dashboard)/admin/manage-users/page.tsx` calls `auth.api.listUsers`, but `src/lib/auth.ts` imports `admin` from `better-auth/plugins` without adding it to `plugins`. That causes TS2339 (`listUsers` does not exist) and a runtime failure; add `admin()` to fix.
 - Route groups do not affect URLs: real routes are `/`, `/browse-services`, `/featured-service`, `/admin`, `/vendor`, `/customer`, `/sign-in`, `/sign-up`.
-- Dead links/routes: `/services` (canonical is `/browse-services`), `/signup`, `/profile`, `/forgot-password`. Stale redirects to `/dashboard` (`vendor/page.tsx`, `vendor/add-service`) and `/login` (`admin/page.tsx`) also point at nonexistent routes.
-- No `middleware.ts`. `src/app/(dashboard)/layout.tsx` only checks for a session; per-page role guards are inconsistent (some server pages redirect, customer pages do not), so a signed-in user can open another role's URLs directly.
-- Placeholder pages: admin `transactions`, both `profile` pages, `featured-service`, and the empty `update-service`. Vendor `subscription` is now wired to Stripe Checkout (see below).
+- Dead links/routes: `/services` (canonical is `/browse-services`), `/signup`, `/profile`, `/forgot-password`.
+- Dashboard route protection lives in the role layouts (`src/app/(dashboard)/{admin,vendor,customer}/layout.tsx`), with an optimistic cookie check in `src/proxy.ts` (Next 16's replacement for middleware). The proxy only checks that a session cookie exists; the layouts validate the session and role/account type on the server.
+- Placeholder pages: admin `transactions`, both `profile` pages, and `featured-service`. Vendor `subscription` is now wired to Stripe Checkout (see below).
 - `src/app/all-api/*` mixes external-API wrappers (`service.tsx`, `bookings.tsx`, `filter.tsx`) with `get-current-user.ts` (server-only better-auth helper). Some files use `.tsx` despite containing no JSX.
 
 ## Auth and environment
@@ -36,7 +34,8 @@ Wedding-vendor marketplace frontend: Next.js 16.4.6 App Router + React 19 (React
 - Never import `@/lib/auth` from client code: it constructs a `MongoClient` at module scope. `auth-client.ts` imports it only for `inferAdditionalFields<typeof auth>`; keep that reference type-only.
 - `.env` is gitignored and there is no example file. Keys: `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL=http://localhost:3000`, `MONGODB_URL`, `NEXT_PUBLIC_API_URL=http://localhost:5000`, `NEXT_PUBLIC_IMGBB_API_KEY`.
 - `auth-client.ts` passes `BETTER_AUTH_URL` to `createAuthClient`, but non-`NEXT_PUBLIC_` vars are undefined in the browser, so it relies on the same-origin fallback. Use a `NEXT_PUBLIC_` URL if auth needs to be cross-origin.
-- `role` (`admin | vendor | customer`, default `customer`) is an additional user field with `input: true`, and sign-up sends the selected role. A client can therefore self-register as `admin`; treat role as user-controlled until this is tightened. `isBlocked`, `businessName`, `subscriptionPlan`, and `subscriptionExpiresAt` are `input: false`.
+- User schema: `role` is owned by the Better Auth admin plugin (`admin | user`, default `user`, `input: false`). Only `role === "admin"` grants admin access. `accountType` is the WedPlan account type (`vendor | customer`, default `customer`, `input: true`); sign-up and Google OAuth send it, and the create hook in `src/lib/auth.ts` normalizes it to vendor/customer. Never map `accountType` to admin. `isBlocked`, `businessName`, `subscriptionPlan`, and `subscriptionExpiresAt` are `input: false`.
+- Use `src/lib/roles.ts` for every authorization decision: `isAdmin`, `isVendor`, `isCustomer`, `getAccountType`, `getDashboardRole`, `getDashboardPath`, `getProfilePath`. Do not compare `user.role` to vendor/customer in components; `getAccountType` contains the only legacy fallback for pre-`accountType` documents.
 - Profile and service images upload directly from the browser to imgbb using `NEXT_PUBLIC_IMGBB_API_KEY`.
 
 ## UI and styling conventions
@@ -72,4 +71,6 @@ Real URLs (route groups do not affect URLs): `/vendor/subscription`, `/vendor/su
 - `POST ${NEXT_PUBLIC_API_URL}/create-checkout-session` must exist and return `{ success: true, url }`. It lives in the separate backend, not this repo. It should set `success_url` to `/vendor/subscription/success?session_id={CHECKOUT_SESSION_ID}` and `cancel_url` to `/vendor/subscription/cancel`.
 - A Stripe webhook (`checkout.session.completed`, signature verified server-side) is required to set `subscriptionPlan` / `subscriptionExpiresAt`. Nothing in this repo can or should activate Premium.
 - No checkout-verification endpoint exists. The success page intentionally does not poll one. If added later (e.g. `POST /verify-checkout-session`), it can use the `session_id` query param.
-- The checkout request sends only `{ vendorId }` with no JWT. Until authentication is wired up and the backend derives the vendor from the token — rather than trusting the body — this is not production-secure. The backend should also confirm the caller is a vendor and not already premium.
+- The checkout request sends only `{ vendorId }` with no JWT. Until authentication is wired up and the backend derives the vendor from the token — rather than trusting the body — this is not production-secure. The backend should also confirm the caller is a vendor (`accountType === "vendor"`) and not already premium.
+- The external backend must apply the same schema split: admin endpoints check `role === "admin"`; vendor/customer endpoints and `/users/stats` check `accountType`. Frontend guards and `credentials: "include"` on admin actions are not a substitute for backend authorization.
+- Existing MongoDB user documents created before `accountType` existed need a one-time backfill (`role: "vendor"` → `accountType: "vendor"`, `role: "customer"` → `accountType: "customer"`). Until then, `getAccountType` keeps those accounts working via its documented fallback.

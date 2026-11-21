@@ -4,19 +4,21 @@
 import { useState } from "react";
 import { Eye, X, Mail, ShieldCheck, Crown, UserRound } from "lucide-react";
 import { User } from "@/type/types";
+import { getAccountType, isAdmin } from "@/lib/roles";
 
 
 
 const UserDetailsButton = ({ user }: { user: User }) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  const role = user.role || "customer";
-const plan =
-  user.subscriptionPlan?.toLowerCase() === "premium"
-    ? "Premium"
-    : "Free";
+  const role = isAdmin(user) ? "admin" : getAccountType(user);
 
-const status = user.isBlocked ? "Inactive" : "Active";
+  const plan =
+    user.subscriptionPlan?.toLowerCase() === "premium"
+      ? "Premium"
+      : "Free";
+
+  const status = (user.isBlocked ?? user.banned) ? "Inactive" : "Active";
 
   return (
     <>

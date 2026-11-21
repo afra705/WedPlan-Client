@@ -19,6 +19,7 @@ import { toast } from "sonner";
 
 import Logo from "./Logo";
 import { signOut, useSession } from "@/lib/auth-client";
+import { getDashboardPath, getProfilePath, isAdmin } from "@/lib/roles";
 
 const links = [
   { label: "Home", href: "/" },
@@ -39,21 +40,11 @@ const Navbar = () => {
 
   const user = session?.user;
 
-  // Access custom role field
- 
-const role = (
-  user as typeof user & {
-    role?: "admin" | "vendor" | "customer";
-  }
-)?.role;
+  // `role` is the Better Auth admin role; `accountType` is vendor/customer.
+  const isAdminUser = isAdmin(user);
 
-// Role-based Dashboard URL
-const dashboardLink =
-  role === "admin"
-    ? "/admin"
-    : role === "vendor"
-      ? "/vendor"
-      : "/customer";
+  // Schema-based dashboard/profile URLs
+  const dashboardLink = getDashboardPath(user);
 
   // Navbar scroll effect
   useEffect(() => {
@@ -103,10 +94,7 @@ const dashboardLink =
   };
 
   // profile update
-const profileLink =
-  session?.user?.role === "vendor"
-    ? "/vendor/profile"
-    : "/customer/profile";
+  const profileLink = getProfilePath(user);
   return (
     <header
       className={`sticky top-0 z-50 w-full transition-all duration-300 ${
@@ -219,7 +207,7 @@ const profileLink =
                         Dashboard
                       </Link>
 
-{session?.user?.role !== "admin" && (
+{!isAdminUser && (
   <Link
     href={profileLink}
     onClick={() => setProfileOpen(false)}
@@ -343,7 +331,7 @@ const profileLink =
                     Dashboard
                   </Link>
 
-{session?.user?.role !== "admin" && (
+{!isAdminUser && (
   <Link
     href={profileLink}
     onClick={() => setProfileOpen(false)}

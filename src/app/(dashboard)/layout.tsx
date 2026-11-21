@@ -6,6 +6,10 @@ import {
 } from "@/components/ui/sidebar";
 
 import { auth } from "@/lib/auth";
+import {
+  getAccountType,
+  getDashboardRole,
+} from "@/lib/roles";
 import { Heart, Sparkles } from "lucide-react";
 import { headers } from "next/headers";
 import Link from "next/link";
@@ -26,7 +30,9 @@ export default async function DashboardLayout({
 
   const user = session.user;
 
-  const role = user.role as "vendor" | "customer" | "admin";
+  // `role` stays the Better Auth admin-plugin role; account type is separate.
+  const accountType = getAccountType(user);
+  const dashboardRole = getDashboardRole(user);
 
   return (
     <SidebarProvider>
@@ -35,7 +41,8 @@ export default async function DashboardLayout({
           name: user.name,
           email: user.email,
           image: user.image,
-          role,
+          role: user.role,
+          accountType,
         }}
       />
 
@@ -83,7 +90,7 @@ export default async function DashboardLayout({
                 <Sparkles size={15} className="text-[#C6A15B]" />
 
                 <span className="text-xs font-semibold capitalize text-[#722F3E]">
-                  {role} Account
+                  {dashboardRole} Account
                 </span>
               </div>
 

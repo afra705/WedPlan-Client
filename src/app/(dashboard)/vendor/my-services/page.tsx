@@ -24,6 +24,7 @@ import {
 } from "@/app/all-api/service";
 
 import { authClient } from "@/lib/auth-client";
+import { isVendor } from "@/lib/roles";
 import type { Service } from "@/type/types";
 import { uploadServiceImage } from "@/app/all-api/imgbb";
 
@@ -261,7 +262,7 @@ const MyServicesPage = () => {
   }
 
   // Not a vendor
-  if (session.user.role !== "vendor") {
+  if (!isVendor(session.user)) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <p className="text-[#8B7478]">

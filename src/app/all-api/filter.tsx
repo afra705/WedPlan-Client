@@ -66,7 +66,11 @@ export const getFilteredManageServices = async (
   }
 
   const response = await fetch(
-    `${API_URL}/services?${params.toString()}`
+    `${API_URL}/services?${params.toString()}`,
+    {
+      // Admin view; let the backend authorize the admin session.
+      credentials: "include",
+    }
   );
 
   if (!response.ok) {

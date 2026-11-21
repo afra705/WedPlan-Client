@@ -10,6 +10,8 @@ export const updateUserBlockStatus = async (
     headers: {
       "Content-Type": "application/json",
     },
+    // Let the backend identify and authorize the admin performing the action.
+    credentials: "include",
     body: JSON.stringify({
       isBlocked,
     }),

@@ -1,9 +1,22 @@
 
+import { getCurrentUser } from "@/app/all-api/get-current-user";
 import { getServices } from "@/app/all-api/service";
+import { getDashboardPath, isAdmin } from "@/lib/roles";
+import { redirect } from "next/navigation";
 import ManageServicesTable from "./ManageServicesTable";
 
 
 const ManageServicesPage = async () => {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    redirect("/sign-in");
+  }
+
+  if (!isAdmin(user)) {
+    redirect(getDashboardPath(user));
+  }
+
   let services = [];
 
   try {

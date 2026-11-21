@@ -2,6 +2,13 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import {
+  getAccountType,
+  getDashboardPath,
+  isAdmin,
+  isCustomer,
+  isVendor,
+} from "@/lib/roles";
 
 import {
   Users,
@@ -30,12 +37,10 @@ const ManageUsersPage = async () => {
   }
 
   // Only admin can access this page
-  const currentUser = session.user as typeof session.user & {
-    role?: string;
-  };
+  const currentUser = session.user;
 
-  if (currentUser.role !== "admin") {
-    redirect("/dashboard");
+  if (!isAdmin(currentUser)) {
+    redirect(getDashboardPath(currentUser));
   }
 
   // Get all registered users
@@ -44,8 +49,10 @@ const ManageUsersPage = async () => {
     name: string;
     email: string;
     image?: string | null;
-    role?: string;
-    plan?: string;
+    role?: string | null;
+    accountType?: string | null;
+    subscriptionPlan?: string | null;
+    isBlocked?: boolean;
     banned?: boolean;
   }[] = [];
 
@@ -68,18 +75,10 @@ const ManageUsersPage = async () => {
     console.error("Failed to load users:", error);
   }
 
-  // Calculate user statistics
-  const adminCount = users.filter(
-    (user) => user.role === "admin"
-  ).length;
-
-  const vendorCount = users.filter(
-    (user) => user.role === "vendor"
-  ).length;
-
-  const customerCount = users.filter(
-    (user) => user.role === "customer"
-  ).length;
+  // Calculate user statistics from the new schema
+  const adminCount = users.filter((user) => isAdmin(user)).length;
+  const vendorCount = users.filter((user) => isVendor(user)).length;
+  const customerCount = users.filter((user) => isCustomer(user)).length;
 
   const stats = [
     {
@@ -204,18 +203,18 @@ const ManageUsersPage = async () => {
 
               <tbody className="divide-y divide-[#F0E7E9]">
                 {users.map((user) => {
-                  const role = user.role || "customer";
-                  const isAdmin = role === "admin";
+                  const isAdminUser = isAdmin(user);
+                  const accountType = getAccountType(user);
+                  const displayRole = isAdminUser ? "admin" : accountType;
 
-                  const roleStyle =
-                    role === "admin"
-                      ? "bg-purple-100 text-purple-700"
-                      : role === "vendor"
-                      ? "bg-amber-100 text-amber-700"
-                      : "bg-green-100 text-green-700";
+                  const roleStyle = isAdminUser
+                    ? "bg-purple-100 text-purple-700"
+                    : accountType === "vendor"
+                    ? "bg-amber-100 text-amber-700"
+                    : "bg-green-100 text-green-700";
 
                   const plan =
-                    user.plan?.toLowerCase() === "premium"
+                    user.subscriptionPlan?.toLowerCase() === "premium"
                       ? "Premium"
                       : "Free";
 
@@ -275,19 +274,19 @@ const ManageUsersPage = async () => {
                         <span
                           className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold capitalize ${roleStyle}`}
                         >
-                          {role === "admin" && (
+                          {isAdminUser && (
                             <ShieldCheck size={13} />
                           )}
 
-                          {role === "vendor" && (
+                          {!isAdminUser && accountType === "vendor" && (
                             <BriefcaseBusiness size={13} />
                           )}
 
-                          {role === "customer" && (
+                          {!isAdminUser && accountType === "customer" && (
                             <UserRound size={13} />
                           )}
 
-                          {role}
+                          {displayRole}
                         </span>
                       </td>
 
@@ -295,7 +294,7 @@ const ManageUsersPage = async () => {
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-2">
 
-                          {isAdmin ? (
+                          {isAdminUser ? (
                             <>
                               <CircleCheck
                                 size={16}
@@ -310,7 +309,9 @@ const ManageUsersPage = async () => {
                               <input
                                 type="checkbox"
                                 id={`block-${user.id}`}
-                                defaultChecked={user.banned || false}
+                                defaultChecked={
+                                  (user.banned ?? user.isBlocked) || false
+                                }
                                 className="peer sr-only"
                               />
 
@@ -363,12 +364,14 @@ const ManageUsersPage = async () => {
                         <UserDetailsButton user={user} />
 
                           {/* Admin cannot be blocked */}
-                          {!isAdmin && (
+                          {!isAdminUser && (
                             <div>
                               <input
                                 type="checkbox"
                                 id={`action-${user.id}`}
-                                defaultChecked={user.banned || false}
+                                defaultChecked={
+                                  (user.banned ?? user.isBlocked) || false
+                                }
                                 className="peer sr-only"
                               />
 
