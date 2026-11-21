@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 
 "use client";
 
@@ -19,11 +20,14 @@ import {
 import { toast } from "sonner";
 
 import { authClient } from "@/lib/auth-client";
-import { addService } from "@/app/all-api/service";
+import {
+  addService,
+  getVendorServices,
+} from "@/app/all-api/service";
 import { uploadServiceImage } from "@/app/all-api/imgbb";
 
 const categories = [
- "Photography & Videography",
+  "Photography & Videography",
   "Wedding Venues",
   "Decoration & Florist",
   "Catering Services",
@@ -31,14 +35,28 @@ const categories = [
   "Wedding Fashion",
 ];
 
+const FREE_SERVICE_LIMIT = 3;
+
 const AddServicePage = () => {
   const router = useRouter();
+
   const { data: session, isPending } = authClient.useSession();
 
+  // User information
   const user = session?.user as
-    | { role?: string; isPremium?: boolean }
+    | {
+        role?: string;
+        subscriptionPlan?: string;
+      }
     | undefined;
 
+  const isPremium = user?.subscriptionPlan === "premium";
+
+  // Subscription states
+  const [serviceCount, setServiceCount] = useState(0);
+  const [checkingLimit, setCheckingLimit] = useState(true);
+
+  // Form states
   const [formData, setFormData] = useState({
     serviceName: "",
     category: "",
@@ -65,6 +83,61 @@ const AddServicePage = () => {
       router.replace("/dashboard");
     }
   }, [session, isPending, user?.role, router]);
+
+  // Check Free Plan service limit
+  useEffect(() => {
+    if (isPending) return;
+
+    if (!session?.user || user?.role !== "vendor") {
+      setCheckingLimit(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const checkServiceLimit = async () => {
+      try {
+        if (isPremium) {
+          setServiceCount(0);
+          return;
+        }
+
+        const services = await getVendorServices(session.user.id);
+
+        if (cancelled) return;
+
+        setServiceCount(services.length);
+
+        if (services.length >= FREE_SERVICE_LIMIT) {
+          toast.error(
+            "Free plan allows only 3 services. Upgrade to Premium!"
+          );
+
+          router.replace("/vendor/subscription");
+        }
+      } catch (error) {
+        console.error("Service limit error:", error);
+
+        toast.error("Failed to check your service limit.");
+      } finally {
+        if (!cancelled) {
+          setCheckingLimit(false);
+        }
+      }
+    };
+
+    checkServiceLimit();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isPending,
+    session,
+    user?.role,
+    isPremium,
+    router,
+  ]);
 
   // Preview URL cleanup
   useEffect(() => {
@@ -125,6 +198,19 @@ const AddServicePage = () => {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    if (checkingLimit) return;
+
+    // Free plan limit check
+    if (!isPremium && serviceCount >= FREE_SERVICE_LIMIT) {
+      toast.error(
+        "Free plan allows only 3 services. Upgrade to Premium!"
+      );
+
+      router.push("/vendor/subscription");
+      return;
+    }
+
+    // Validate form
     if (
       !formData.serviceName.trim() ||
       !formData.category ||
@@ -155,10 +241,18 @@ const AddServicePage = () => {
       let imageUrl = "";
 
       if (image) {
-        imageUrl = await uploadServiceImage(image);
+        try {
+          imageUrl = await uploadServiceImage(image);
+        } catch (uploadError) {
+          console.error("ImgBB upload error:", uploadError);
 
-        if (!imageUrl) {
-          throw new Error("Image upload failed.");
+          throw new Error(
+            "Image upload failed. Please try a JPG, PNG or WEBP image under 5MB."
+          );
+        }
+
+        if (!imageUrl || !imageUrl.startsWith("https://")) {
+          throw new Error("Image upload failed. Please try again.");
         }
       }
 
@@ -172,17 +266,23 @@ const AddServicePage = () => {
         description: formData.description.trim(),
         price,
         location: formData.location.trim(),
+        image: imageUrl,
         images: imageUrl ? [imageUrl] : [],
       };
 
-      console.log("Service data:", serviceData);
-      console.log("Uploaded image:", serviceData.images[0] || "No image");
-
-      // Step 3: Save data to MongoDB through backend
+      // Step 3: Save service
       await addService(serviceData);
 
-      toast.success("Service submitted successfully! Awaiting approval.");
+      toast.success(
+        "Service submitted successfully! Awaiting approval."
+      );
 
+      // Update service count
+      if (!isPremium) {
+        setServiceCount((prev) => prev + 1);
+      }
+
+      // Reset form
       setFormData({
         serviceName: "",
         category: "",
@@ -208,7 +308,12 @@ const AddServicePage = () => {
   };
 
   // Loading / authorization
-  if (isPending || !session || user?.role !== "vendor") {
+  if (
+    isPending ||
+    checkingLimit ||
+    !session ||
+    user?.role !== "vendor"
+  ) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-[#722F3E]" />
@@ -465,7 +570,7 @@ const AddServicePage = () => {
               <div className="border-t border-[#F0E7E1] pt-6">
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || checkingLimit}
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#722F3E] px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#4A1F2A] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:min-w-[200px]"
                 >
                   {loading ? (
@@ -560,21 +665,20 @@ const AddServicePage = () => {
                 </p>
 
                 <p className="mt-2 text-xl font-bold text-[#722F3E]">
-                  {user?.isPremium ? "Premium Plan" : "Free Plan"}
+                  {isPremium ? "Premium Plan" : "Free Plan"}
                 </p>
 
                 <p className="mt-2 text-sm text-[#8B7478]">
-                  {user?.isPremium
+                  {isPremium
                     ? "Publish unlimited active services."
-                    : "Publish up to 3 active services."}
+                    : `${serviceCount}/3 services used. You can publish up to 3 services.`}
                 </p>
               </div>
 
-              {!user?.isPremium && (
+              {!isPremium && (
                 <div className="mt-4">
                   <p className="text-xs leading-5 text-[#9B8588]">
-                    Need more listings? Upgrade to Premium to publish unlimited
-                    active services.
+                    Upgrade to Premium to publish unlimited services.
                   </p>
 
                   <Link
