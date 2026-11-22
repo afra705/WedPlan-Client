@@ -16,13 +16,13 @@ import {
   BriefcaseBusiness,
   UserRound,
   Mail,
-  Ban,
-  Eye,
   Crown,
   CircleCheck,
   CircleX,
 } from "lucide-react";
+
 import UserDetailsButton from "./UserDetailsButton";
+import UserBlockButton from "./UserBlockButton";
 
 const ManageUsersPage = async () => {
   // Get logged-in user
@@ -75,7 +75,7 @@ const ManageUsersPage = async () => {
     console.error("Failed to load users:", error);
   }
 
-  // Calculate user statistics from the new schema
+  // Calculate user statistics
   const adminCount = users.filter((user) => isAdmin(user)).length;
   const vendorCount = users.filter((user) => isVendor(user)).length;
   const customerCount = users.filter((user) => isCustomer(user)).length;
@@ -204,8 +204,17 @@ const ManageUsersPage = async () => {
               <tbody className="divide-y divide-[#F0E7E9]">
                 {users.map((user) => {
                   const isAdminUser = isAdmin(user);
+
                   const accountType = getAccountType(user);
-                  const displayRole = isAdminUser ? "admin" : accountType;
+
+                  const displayRole = isAdminUser
+                    ? "admin"
+                    : accountType;
+
+                  // Check user block status
+                  const isBlocked =
+                    user.banned === true ||
+                    user.isBlocked === true;
 
                   const roleStyle = isAdminUser
                     ? "bg-purple-100 text-purple-700"
@@ -223,6 +232,7 @@ const ManageUsersPage = async () => {
                       key={user.id}
                       className="transition hover:bg-[#FAF5F0]"
                     >
+
                       {/* User */}
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
@@ -265,6 +275,7 @@ const ManageUsersPage = async () => {
                           {plan === "Premium" && (
                             <Crown size={13} />
                           )}
+
                           {plan}
                         </span>
                       </td>
@@ -290,7 +301,7 @@ const ManageUsersPage = async () => {
                         </span>
                       </td>
 
-                      {/* Status and Block/Unblock UI */}
+                      {/* Status */}
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-2">
 
@@ -300,59 +311,35 @@ const ManageUsersPage = async () => {
                                 size={16}
                                 className="text-green-600"
                               />
+
                               <span className="text-xs font-semibold text-green-600">
                                 Active
                               </span>
                             </>
+                          ) : isBlocked ? (
+                            <>
+                              <CircleX
+                                size={16}
+                                className="text-red-600"
+                              />
+
+                              <span className="text-xs font-semibold text-red-600">
+                                Inactive
+                              </span>
+                            </>
                           ) : (
-                            <div>
-                              <input
-                                type="checkbox"
-                                id={`block-${user.id}`}
-                                defaultChecked={
-                                  (user.banned ?? user.isBlocked) || false
-                                }
-                                className="peer sr-only"
+                            <>
+                              <CircleCheck
+                                size={16}
+                                className="text-green-600"
                               />
 
-                              <label
-                                htmlFor={`block-${user.id}`}
-                                className="hidden"
-                              />
-
-                              <style>
-                                {`
-                                  #block-${user.id}:checked ~ .status-label .active-status {
-                                    display: none;
-                                  }
-                                  #block-${user.id}:checked ~ .status-label .inactive-status {
-                                    display: inline-flex;
-                                  }
-                                  #block-${user.id}:not(:checked) ~ .status-label .active-status {
-                                    display: inline-flex;
-                                  }
-                                  #block-${user.id}:not(:checked) ~ .status-label .inactive-status {
-                                    display: none;
-                                  }
-                                `}
-                              </style>
-
-                              <label
-                                htmlFor={`block-${user.id}`}
-                                className="status-label flex cursor-pointer items-center gap-2"
-                              >
-                                <span className="active-status items-center gap-1.5 text-xs font-semibold text-green-600">
-                                  <CircleCheck size={16} />
-                                  Active
-                                </span>
-
-                                <span className="inactive-status items-center gap-1.5 text-xs font-semibold text-red-600">
-                                  <CircleX size={16} />
-                                  Inactive
-                                </span>
-                              </label>
-                            </div>
+                              <span className="text-xs font-semibold text-green-600">
+                                Active
+                              </span>
+                            </>
                           )}
+
                         </div>
                       </td>
 
@@ -360,37 +347,13 @@ const ManageUsersPage = async () => {
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-2">
 
-                          {/* View Details */}
-                        <UserDetailsButton user={user} />
+                          <UserDetailsButton user={user} />
 
-                          {/* Admin cannot be blocked */}
                           {!isAdminUser && (
-                            <div>
-                              <input
-                                type="checkbox"
-                                id={`action-${user.id}`}
-                                defaultChecked={
-                                  (user.banned ?? user.isBlocked) || false
-                                }
-                                className="peer sr-only"
-                              />
-
-                              <label
-                                htmlFor={`action-${user.id}`}
-                                className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100 peer-checked:hidden"
-                              >
-                                <Ban size={14} />
-                                Block
-                              </label>
-
-                              <label
-                                htmlFor={`action-${user.id}`}
-                                className="hidden cursor-pointer items-center gap-1.5 rounded-lg bg-green-50 px-3 py-2 text-xs font-semibold text-green-600 transition hover:bg-green-100 peer-checked:flex"
-                              >
-                                <ShieldCheck size={14} />
-                                Unblock
-                              </label>
-                            </div>
+                            <UserBlockButton
+                              userId={user.id}
+                              initialBlocked={isBlocked}
+                            />
                           )}
 
                         </div>
@@ -405,7 +368,6 @@ const ManageUsersPage = async () => {
           </div>
         )}
       </div>
-
     </div>
   );
 };

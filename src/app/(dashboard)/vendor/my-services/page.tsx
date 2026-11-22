@@ -23,7 +23,7 @@ import {
   deleteService,
 } from "@/app/all-api/service";
 
-import { authClient } from "@/lib/auth-client";
+import { authClient, getJwtToken } from "@/lib/auth-client";
 import { isVendor } from "@/lib/roles";
 import type { Service } from "@/type/types";
 import { uploadServiceImage } from "@/app/all-api/imgbb";
@@ -69,34 +69,41 @@ const MyServicesPage = () => {
   });
 
   // Load logged-in vendor services
-  useEffect(() => {
-    if (isPending) return;
+ useEffect(() => {
+  if (isPending) return;
 
-    const loadServices = async () => {
-      if (!vendorId) {
-        setServices([]);
-        setLoading(false);
-        return;
-      }
+  const loadServices = async () => {
+    if (!vendorId) {
+      setServices([]);
+      setLoading(false);
+      return;
+    }
 
-      setLoading(true);
+    setLoading(true);
 
-      try {
-        const data = await getVendorServices(vendorId);
-        setServices(data);
-      } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "Failed to load services"
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
+    try {
+      const token = await getJwtToken();
 
-    loadServices();
-  }, [vendorId, isPending]);
+      console.log("Token exists:", !!token);
+      console.log("Token parts:", token.split(".").length);
+
+      const data = await getVendorServices(token);
+      setServices(data);
+    } catch (error) {
+      console.error("Load services error:", error);
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to load services"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  loadServices();
+}, [vendorId, isPending]);
 
   // Input change
   const handleChange = (

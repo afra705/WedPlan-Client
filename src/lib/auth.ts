@@ -2,18 +2,28 @@
 import { betterAuth } from "better-auth";
 import { MongoClient } from "mongodb";
 import { mongodbAdapter } from "@better-auth/mongo-adapter";
-import { admin } from "better-auth/plugins";
+import { admin, jwt } from "better-auth/plugins";
 import { getOAuthState } from "better-auth/api";
 
 const client = new MongoClient(process.env.MONGODB_URL as string);
 const db = client.db("wedplan");
 
 export const auth = betterAuth({
+  baseURL: process.env.BETTER_AUTH_URL,
+
   database: mongodbAdapter(db, {
     client,
   }),
 
   plugins: [
+    jwt({
+      jwt: {
+        issuer: process.env.BETTER_AUTH_URL!,
+        audience: process.env.BETTER_AUTH_URL!,
+        expirationTime: "15m",
+      },
+    }),
+
     admin({
       defaultRole: "user",
     }),
@@ -21,7 +31,6 @@ export const auth = betterAuth({
 
   user: {
     additionalFields: {
-      // Customer or Vendor account type
       accountType: {
         type: "string",
         required: false,
@@ -61,17 +70,13 @@ export const auth = betterAuth({
     user: {
       create: {
         before: async (user, ctx) => {
-          // Account type is user-controlled (vendor or customer), but it is
-          // normalized here so it can never become an admin role. Admin access
-          // is controlled only by the admin plugin's `role` field, which is
-          // input: false and cannot be set through signup or updateUser.
-          let accountType = (user as { accountType?: string }).accountType;
+          let accountType = (
+            user as { accountType?: string }
+          ).accountType;
 
-          // Google OAuth signup stores the selected account type in OAuth state.
           if (ctx?.path === "/callback/:id") {
-            const additionalData = await getOAuthState<{
-              accountType?: string;
-            }>();
+            const additionalData =
+              await getOAuthState<{ accountType?: string }>();
 
             accountType = additionalData?.accountType;
           }

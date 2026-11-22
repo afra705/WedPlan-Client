@@ -28,7 +28,7 @@ const CustomerOverviewPage = () => {
       }
 
       try {
-        const data = await getMyBookings(session.user.email);
+        const data = await getMyBookings();
         setBookings(data);
       } catch (error) {
         console.error("Failed to fetch bookings:", error);

@@ -1,23 +1,65 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import {
   CheckCircle2,
   Clock3,
+  Loader2,
   ShieldCheck,
 } from "lucide-react";
 
 import { useSession } from "@/lib/auth-client";
+import {
+  formatSubscriptionExpiry,
+  isPremiumActive,
+} from "@/lib/subscription";
 
 const SubscriptionSuccessPage = () => {
-  const { data: session } = useSession();
+  const { data: session, isPending, isRefetching, refetch } =
+    useSession();
 
-  // Read-only: the backend (Stripe webhook) is the only thing that upgrades a plan.
-  const currentPlan = (
-    session?.user?.subscriptionPlan || "free"
-  ).toLowerCase();
+  
+  const isPremium = isPremiumActive(session?.user);
 
-  const isPremium = currentPlan === "premium";
+  const renewalDate = isPremium
+    ? formatSubscriptionExpiry(session?.user?.subscriptionExpiresAt)
+    : null;
+
+
+  useEffect(() => {
+    if (isPending || isPremium) return;
+
+    let attempts = 0;
+
+    const interval = window.setInterval(() => {
+      attempts += 1;
+      void refetch();
+
+      if (attempts >= 20) {
+        window.clearInterval(interval);
+      }
+    }, 3000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void refetch();
+      }
+    };
+
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibilityChange
+    );
+
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibilityChange
+      );
+    };
+  }, [isPending, isPremium, refetch]);
 
   return (
     <div className="min-h-screen px-4 py-10 sm:py-14">
@@ -28,7 +70,7 @@ const SubscriptionSuccessPage = () => {
             <div
               className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full ${
                 isPremium
-                  ? "bg-[#E8F5EB] text-[#278348]"
+                  ? "bg-amber-100 text-amber-600"
                   : "bg-[#F8E9EC] text-[#8B354B]"
               }`}
             >
@@ -55,8 +97,28 @@ const SubscriptionSuccessPage = () => {
             <p className="text-sm leading-6 text-[#6F555B]">
               {isPremium
                 ? "Your account now shows the Premium plan. You can publish unlimited active services and enjoy all premium vendor features."
-                : "Stripe has sent us your payment. This verification usually takes a few moments. Refresh this page or open your Subscription page to see your updated plan."}
+                : "Stripe has sent us your payment. This verification usually takes a few moments. We check for confirmation automatically, and the page updates as soon as Stripe confirms it."}
             </p>
+
+            {isPremium && renewalDate && (
+              <p className="mt-3 text-sm font-medium text-[#B87965]">
+                Renews on {renewalDate}
+              </p>
+            )}
+
+            {!isPremium && (
+              <p className="mt-4 flex items-center gap-2 text-xs font-medium text-[#8B7478]">
+                <Loader2
+                  size={14}
+                  className={`animate-spin ${
+                    isRefetching ? "" : "opacity-60"
+                  }`}
+                />
+                {isRefetching
+                  ? "Checking Stripe confirmation..."
+                  : "Waiting for Stripe confirmation..."}
+              </p>
+            )}
 
             <div className="mt-6 flex gap-3 rounded-xl border border-[#F0E4E6] bg-[#FFF9F5] p-4">
               <ShieldCheck

@@ -1,5 +1,7 @@
-
-import { getCurrentUser } from "@/app/all-api/get-current-user";
+import {
+  getCurrentUser,
+  getServerToken,
+} from "@/app/all-api/get-current-user";
 
 import { getDashboardPath, isAdmin } from "@/lib/roles";
 import { redirect } from "next/navigation";
@@ -50,12 +52,14 @@ const TransactionsPage = async () => {
   let transactions: Transaction[] = [];
   let errorMessage = "";
 
-  try {
-    transactions = await getAllTransactions();
-  } catch (error) {
-    console.error("Transactions fetch error:", error);
-    errorMessage = "Failed to load transactions. Please try again.";
-  }
+try {
+  const token = await getServerToken();
+
+  transactions = await getAllTransactions(token);
+} catch (error) {
+  console.error("Transactions fetch error:", error);
+  errorMessage = "Failed to load transactions. Please try again.";
+}
 
   // Calculate statistics
   const totalTransactions = transactions.length;

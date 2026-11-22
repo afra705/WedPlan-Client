@@ -1,5 +1,5 @@
 
-import { getCurrentUser } from "@/app/all-api/get-current-user";
+import { getCurrentUser, getServerToken } from "@/app/all-api/get-current-user";
 import { getServices } from "@/app/all-api/service";
 import { getDashboardPath, isAdmin } from "@/lib/roles";
 import { redirect } from "next/navigation";
@@ -7,23 +7,25 @@ import ManageServicesTable from "./ManageServicesTable";
 
 
 const ManageServicesPage = async () => {
-  const user = await getCurrentUser();
+ const user = await getCurrentUser();
 
-  if (!user) {
-    redirect("/sign-in");
-  }
+if (!user) {
+  redirect("/sign-in");
+}
 
-  if (!isAdmin(user)) {
-    redirect(getDashboardPath(user));
-  }
+if (!isAdmin(user)) {
+  redirect(getDashboardPath(user));
+}
 
-  let services = [];
+let services = [];
 
-  try {
-    services = await getServices();
-  } catch (error) {
-    console.error("Failed to get services:", error);
-  }
+try {
+  const token = await getServerToken();
+
+  services = await getServices(token);
+} catch (error) {
+  console.error("Failed to get services:", error);
+}
 
   return (
     <div className="space-y-8">

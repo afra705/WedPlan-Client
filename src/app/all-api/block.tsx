@@ -1,27 +1,30 @@
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+import { authClient } from "@/lib/auth-client";
 
 export const updateUserBlockStatus = async (
   userId: string,
   isBlocked: boolean
 ) => {
-  const response = await fetch(`${API_URL}/users/${userId}/block`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    // Let the backend identify and authorize the admin performing the action.
-    credentials: "include",
-    body: JSON.stringify({
-      isBlocked,
-    }),
-  });
+  if (isBlocked) {
+    const { data, error } = await authClient.admin.banUser({
+      userId,
+      banReason: "Blocked by administrator",
+    });
 
-  const result = await response.json();
+    if (error) {
+      throw new Error(error.message || "Failed to block user");
+    }
 
-  if (!response.ok) {
-    throw new Error(result.message || "Failed to update user status");
+    return data;
   }
 
-  return result;
+  const { data, error } = await authClient.admin.unbanUser({
+    userId,
+  });
+
+  if (error) {
+    throw new Error(error.message || "Failed to unblock user");
+  }
+
+  return data;
 };

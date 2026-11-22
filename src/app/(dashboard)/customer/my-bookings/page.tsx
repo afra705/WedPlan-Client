@@ -30,7 +30,7 @@ const MyBookingsPage = () => {
       }
 
       try {
-        const data = await getMyBookings(session.user.email);
+        const data = await getMyBookings();
         setBookings(data);
       } catch (error) {
         console.error(error);
@@ -52,7 +52,7 @@ const handleCancel = async (bookingId: string) => {
         try {
           setCancellingId(bookingId);
 
-          await cancelBooking(bookingId, session!.user.email);
+          await cancelBooking(bookingId);
 
           setBookings((previousBookings) =>
             previousBookings.map((booking) =>

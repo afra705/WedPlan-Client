@@ -15,7 +15,7 @@ import { getServices } from "@/app/all-api/service";
 import { getUserStats } from "@/app/all-api/user";
 import { getDashboardPath, isAdmin } from "@/lib/roles";
 import { Service } from "@/type/types";
-
+import { getServerToken } from "@/app/all-api/get-current-user";
 
 
 const AdminOverviewPage = async () => {
@@ -31,22 +31,25 @@ const AdminOverviewPage = async () => {
   }
 
   // Dashboard data
-  let services: Service[] = [];
-  let totalVendors = 0;
-  let totalCustomers = 0;
+ // Dashboard data
+let services: Service[] = [];
+let totalVendors = 0;
+let totalCustomers = 0;
 
-  try {
-    const [serviceData, userStats] = await Promise.all([
-      getServices(),
-      getUserStats(),
-    ]);
+try {
+  const token = await getServerToken();
 
-    services = serviceData;
-    totalVendors = userStats.totalVendors;
-    totalCustomers = userStats.totalCustomers;
-  } catch (error) {
-    console.error("Dashboard data error:", error);
-  }
+  const [serviceData, userStats] = await Promise.all([
+    getServices(token),
+    getUserStats(token),
+  ]);
+
+  services = serviceData;
+  totalVendors = userStats.totalVendors;
+  totalCustomers = userStats.totalCustomers;
+} catch (error) {
+  console.error("Dashboard data error:", error);
+}
 
   // Service statistics
   const totalServices = services.length;

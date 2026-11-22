@@ -11,8 +11,12 @@ import {
 import { getVendorServices } from "@/app/all-api/service";
 
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/app/all-api/get-current-user";
+import { getCurrentUser, getServerToken } from "@/app/all-api/get-current-user";
 import { getDashboardPath, isVendor } from "@/lib/roles";
+import {
+  formatSubscriptionExpiry,
+  isPremiumActive,
+} from "@/lib/subscription";
 
 type Service = {
   _id: string;
@@ -23,25 +27,29 @@ type Service = {
 
 const VendorOverviewPage = async () => {
   // Get logged-in user
-  const user = await getCurrentUser();
+const user = await getCurrentUser();
 
-  if (!user) {
-    redirect("/sign-in");
-  }
+if (!user) {
+  redirect("/sign-in");
+}
 
-  if (!isVendor(user)) {
-    redirect(getDashboardPath(user));
-  }
+if (!isVendor(user)) {
+  redirect(getDashboardPath(user));
+}
 
-  // Get only logged-in vendor's services
-  let services: Service[] = [];
+let services: Service[] = [];
 
-  try {
-    const data = await getVendorServices(user.id);
-    services = data;
-  } catch (error) {
-    console.error("Dashboard error:", error);
-  }
+try {
+  const token = await getServerToken();
+
+  console.log("JWT generated:", !!token);
+
+  services = await getVendorServices(token);
+
+  console.log("Services fetched:", services.length);
+} catch (error) {
+  console.error("Dashboard error:", error);
+}
 
   // Calculate statistics
   const totalServices = services.length;
@@ -84,6 +92,12 @@ const VendorOverviewPage = async () => {
       color: "bg-purple-50 text-purple-600",
     },
   ];
+
+const isPremium = isPremiumActive(user);
+
+const renewalDate = isPremium
+  ? formatSubscriptionExpiry(user.subscriptionExpiresAt)
+  : null;
 
   return (
     <div className="space-y-8 pb-10">
@@ -131,42 +145,66 @@ const VendorOverviewPage = async () => {
         />
       </div>
 
-   {/* Subscription */}
+
+{/* Subscription */}
+<div>
+  <h3 className="mb-4 text-lg font-bold text-[#4A1F2A]">
+    Current Subscription
+  </h3>
+
+  <div
+    className={`relative overflow-hidden rounded-2xl border p-7 ${
+      isPremium
+        ? "border-amber-200 bg-amber-50"
+        : "border-[#EBD8D0] bg-[#FFF9F5]"
+    }`}
+  >
+    <div className="relative z-10 flex items-center gap-5">
+      <div
+        className={`rounded-2xl p-4 text-white ${
+          isPremium ? "bg-amber-500" : "bg-[#4A1F2A]"
+        }`}
+      >
+        {isPremium ? (
+          <Crown size={28} />
+        ) : (
+          <BriefcaseBusiness size={28} />
+        )}
+      </div>
+
       <div>
-        <h3 className="mb-4 text-lg font-bold text-[#4A1F2A]">
-          Current Subscription
+        <p className="text-xs font-semibold uppercase tracking-widest text-[#B87965]">
+          Your Current Plan
+        </p>
+
+        <h3 className="mt-1 text-2xl font-bold text-[#4A1F2A]">
+          {isPremium ? "Premium Plan" : "Free Plan"}
         </h3>
 
-        <div className="relative overflow-hidden rounded-2xl border border-[#EBD8D0] bg-[#FFF9F5] p-7">
+        <p className="mt-1 text-sm text-[#947E82]">
+          {isPremium
+            ? "Enjoy your premium features and benefits."
+            : "Upgrade your plan to unlock more features."}
+        </p>
 
-          <div className="relative z-10 flex items-center gap-5">
-
-            <div className="rounded-2xl bg-[#4A1F2A] p-4 text-white">
-              <Crown size={28} />
-            </div>
-
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-[#B87965]">
-                Your Current Plan
-              </p>
-
-              <h3 className="mt-1 text-2xl font-bold text-[#4A1F2A]">
-                Free Plan
-              </h3>
-
-              <p className="mt-1 text-sm text-[#947E82]">
-                Upgrade your plan to unlock more features.
-              </p>
-            </div>
-
-          </div>
-
-          <Sparkles
-            size={120}
-            className="absolute -bottom-8 -right-5 text-[#B87965]/10"
-          />
-        </div>
+        {renewalDate && (
+          <p className="mt-2 text-xs font-medium text-[#B87965]">
+            Renews on {renewalDate}
+          </p>
+        )}
       </div>
+    </div>
+
+    <Sparkles
+      size={120}
+      className={`absolute -bottom-8 -right-5 ${
+        isPremium ? "text-amber-500/20" : "text-[#B87965]/10"
+      }`}
+    />
+  </div>
+</div>
+
+      
       {/* Statistics */}
       <div>
         <h3 className="text-lg font-bold text-[#4A1F2A]">

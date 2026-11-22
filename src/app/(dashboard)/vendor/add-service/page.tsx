@@ -1,3 +1,4 @@
+
 /* eslint-disable react-hooks/set-state-in-effect */
 
 "use client";
@@ -19,8 +20,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { authClient } from "@/lib/auth-client";
+import { authClient, getJwtToken } from "@/lib/auth-client";
 import { getDashboardPath, isVendor } from "@/lib/roles";
+import { isPremiumActive } from "@/lib/subscription";
 import {
   addService,
   getVendorServices,
@@ -48,13 +50,14 @@ const AddServicePage = () => {
     | {
         role?: string | null;
         accountType?: string | null;
-        subscriptionPlan?: string;
+        subscriptionPlan?: string | null;
+        subscriptionExpiresAt?: Date | string | null;
       }
     | undefined;
 
   const isVendorUser = isVendor(user);
   const dashboardPath = getDashboardPath(user);
-  const isPremium = user?.subscriptionPlan === "premium";
+  const isPremium = isPremiumActive(user);
 
   // Subscription states
   const [serviceCount, setServiceCount] = useState(0);
@@ -106,7 +109,15 @@ const AddServicePage = () => {
           return;
         }
 
-        const services = await getVendorServices(session.user.id);
+        // Generate actual JWT
+        const token = await getJwtToken();
+
+        if (token.split(".").length !== 3) {
+          throw new Error("Invalid JWT format.");
+        }
+
+        // Fetch services using JWT
+        const services = await getVendorServices(token);
 
         if (cancelled) return;
 
@@ -122,7 +133,11 @@ const AddServicePage = () => {
       } catch (error) {
         console.error("Service limit error:", error);
 
-        toast.error("Failed to check your service limit.");
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to check your service limit."
+        );
       } finally {
         if (!cancelled) {
           setCheckingLimit(false);
@@ -202,7 +217,7 @@ const AddServicePage = () => {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (checkingLimit) return;
+    if (checkingLimit || loading) return;
 
     // Free plan limit check
     if (!isPremium && serviceCount >= FREE_SERVICE_LIMIT) {
@@ -241,7 +256,14 @@ const AddServicePage = () => {
     setLoading(true);
 
     try {
-      // Step 1: Upload image to ImgBB
+      // Step 1: Generate JWT
+      const token = await getJwtToken();
+
+      if (token.split(".").length !== 3) {
+        throw new Error("Invalid authentication token.");
+      }
+
+      // Step 2: Upload image to ImgBB
       let imageUrl = "";
 
       if (image) {
@@ -260,7 +282,7 @@ const AddServicePage = () => {
         }
       }
 
-      // Step 2: Prepare service data
+      // Step 3: Prepare service data
       const serviceData = {
         vendorId: session.user.id,
         vendorName: session.user.name || "",
@@ -274,8 +296,8 @@ const AddServicePage = () => {
         images: imageUrl ? [imageUrl] : [],
       };
 
-      // Step 3: Save service
-      await addService(serviceData);
+      // Step 4: Save service using JWT
+      await addService(serviceData, token);
 
       toast.success(
         "Service submitted successfully! Awaiting approval."

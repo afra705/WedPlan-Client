@@ -1,53 +1,51 @@
-import { Service } from "@/type/types";
+
+import { getAuthHeaders, getJwtToken } from "@/lib/auth-client";
+import { Service, ServiceData } from "@/type/types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-// Add Service API
-export const addService = async (serviceData: {
-  serviceName: string;
-  category: string;
-  description: string;
-  price: number;
-  location: string;
-}) => {
+// POST - Add Service (Vendor)
+export const addService = async (
+  serviceData: ServiceData,
+  token: string
+) => {
   const response = await fetch(`${API_URL}/services`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
     },
-    credentials: "include",
     body: JSON.stringify(serviceData),
   });
 
-  const result = await response.json();
+  const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(result.message || "Failed to add service");
+    throw new Error(data.message || "Failed to add service");
   }
 
-  return result;
+  return data;
 };
 
-// read
-
-
-// Get All Services API
-export const getServices = async () => {
+// GET - All Approved Services (Public)
+export const getServices = async (token?: string) => {
   const response = await fetch(`${API_URL}/services`, {
-    credentials: "include",
+    headers: token
+      ? {
+          Authorization: `Bearer ${token}`,
+        }
+      : undefined,
+    cache: "no-store",
   });
 
-  const result = await response.json();
-
   if (!response.ok) {
-    throw new Error(result.message || "Failed to get services");
+    throw new Error("Failed to fetch services");
   }
 
-  return result;
+  return response.json();
 };
 
-
-// Get Single Service By ID
+// GET - Single Service (Public)
 export const getServiceById = async (
   id: string
 ): Promise<Service> => {
@@ -64,17 +62,19 @@ export const getServiceById = async (
   return result;
 };
 
-// Update service
+// PATCH - Update Service (Vendor)
 export const updateService = async (
   id: string,
   updatedData: Partial<Service>
 ) => {
+  const headers = await getAuthHeaders();
+
   const response = await fetch(`${API_URL}/services/${id}`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
+      ...headers,
     },
-    credentials: "include",
     body: JSON.stringify(updatedData),
   });
 
@@ -87,11 +87,13 @@ export const updateService = async (
   return result;
 };
 
-// Delete service
+// DELETE - Delete Service (Vendor)
 export const deleteService = async (id: string) => {
+  const headers = await getAuthHeaders();
+
   const response = await fetch(`${API_URL}/services/${id}`, {
     method: "DELETE",
-    credentials: "include",
+    headers,
   });
 
   const result = await response.json();
@@ -103,36 +105,55 @@ export const deleteService = async (id: string) => {
   return result;
 };
 
+// PATCH - Approve / Reject Service (Admin)
 export const updateServiceStatus = async (
   id: string,
   status: "pending" | "approved" | "rejected"
 ) => {
+  // তোমার existing code একই থাকবে
+
+  const headers = await getAuthHeaders();
+
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/services/${id}/status`,
+    `${API_URL}/services/${id}/status`,
     {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
+        ...headers,
       },
-      // Admin action: the backend must verify the admin session.
-      credentials: "include",
       body: JSON.stringify({ status }),
     }
   );
 
+  const result = await response.json();
+
   if (!response.ok) {
-    throw new Error("Failed to update service status");
+    throw new Error(result.message || "Failed to update service status");
   }
 
-  return response.json();
+  return result;
 };
 
+// GET - My Services (Vendor)
+// GET - My Services (Vendor)
+export const getVendorServices = async (token: string) => {
+  console.log("Token exists:", !!token);
+  console.log("Token parts:", token.split(".").length);
 
-// Get Vendor Services
-export const getVendorServices = async (vendorId: string) => {
-  const services = await getServices();
+  const response = await fetch(`${API_URL}/my-services`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+  });
 
-  return services.filter(
-    (service: Service) => service.vendorId === vendorId
-  );
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to fetch vendor services");
+  }
+
+  return data;
 };

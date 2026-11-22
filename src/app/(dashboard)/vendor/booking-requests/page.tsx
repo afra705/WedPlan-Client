@@ -26,56 +26,71 @@ const BookingRequestsPage = () => {
 useEffect(() => {
   if (isPending || !vendorId) return;
 
+  let isMounted = true;
+
   const fetchBookings = async () => {
     try {
-      const data = await getVendorBookingRequests(vendorId);
-      setBookings(data);
+      setLoading(true);
+
+      const data = await getVendorBookingRequests();
+
+      if (isMounted) {
+        setBookings(data);
+      }
     } catch (error) {
-      toast.error("Failed to load booking requests");
+      if (isMounted) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to load booking requests"
+        );
+      }
     } finally {
-      setLoading(false);
+      if (isMounted) {
+        setLoading(false);
+      }
     }
   };
 
   fetchBookings();
+
+  return () => {
+    isMounted = false;
+  };
 }, [vendorId, isPending]);
 
 
   // Accept or Reject booking
-  const handleStatusChange = async (
-    bookingId: string,
-    status: "accepted" | "rejected"
-  ) => {
-    if (!vendorId) return;
+ const handleStatusChange = async (
+  bookingId: string,
+  status: "accepted" | "rejected"
+) => {
+  if (!vendorId) return;
 
-    try {
-      setProcessingId(bookingId);
+  try {
+    setProcessingId(bookingId);
 
-      await updateBookingStatus(bookingId, vendorId, status);
+    await updateBookingStatus(bookingId, status);
 
-      // Update UI without reloading the page
-      setBookings((previousBookings) =>
-        previousBookings.map((booking) =>
-          booking._id === bookingId
-            ? { ...booking, status }
-            : booking
-        )
-      );
+    setBookings((previousBookings) =>
+      previousBookings.map((booking) =>
+        booking._id === bookingId
+          ? { ...booking, status }
+          : booking
+      )
+    );
 
-      toast.success(
-        `Booking ${status} successfully!`
-      );
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Something went wrong"
-      );
-    } finally {
-      setProcessingId(null);
-    }
-  };
-
+    toast.success(`Booking ${status} successfully!`);
+  } catch (error) {
+    toast.error(
+      error instanceof Error
+        ? error.message
+        : "Something went wrong"
+    );
+  } finally {
+    setProcessingId(null);
+  }
+};
   if (isPending || loading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">

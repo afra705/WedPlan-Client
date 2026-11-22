@@ -1,25 +1,23 @@
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-export const getAllTransactions = async () => {
-  console.log("API URL:", API_URL);
-
+export const getAllTransactions = async (token: string) => {
   const response = await fetch(`${API_URL}/transactions`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
     cache: "no-store",
   });
 
-  console.log("Response Status:", response.status);
+  const data = await response.json();
 
   if (!response.ok) {
-    const errorText = await response.text();
-
-    console.log("Backend Error:", errorText);
-
     throw new Error(
-      `Failed to fetch transactions: ${response.status}`
+      data.message || `Failed to fetch transactions: ${response.status}`
     );
   }
-
-  const data = await response.json();
 
   return data.transactions;
 };

@@ -21,33 +21,54 @@ const UserBlockButton = ({
 
   const router = useRouter();
 
-  const handleBlockToggle = async () => {
-    try {
-      setIsLoading(true);
+const handleBlockToggle = () => {
+  const newStatus = !isBlocked;
 
-      const newStatus = !isBlocked;
+  toast(
+    newStatus ? "Block this user?" : "Unblock this user?",
+    {
+      description: newStatus
+        ? "This user will lose access to their account."
+        : "This user will be able to access their account again.",
 
-      await updateUserBlockStatus(userId, newStatus);
+      action: {
+        label: newStatus ? "Block" : "Unblock",
+        onClick: async () => {
+          try {
+            setIsLoading(true);
 
-      setIsBlocked(newStatus);
+            await updateUserBlockStatus(userId, newStatus);
 
-      router.refresh();
+            setIsBlocked(newStatus);
 
-      toast.success(
-        newStatus
-          ? "User blocked successfully!"
-          : "User unblocked successfully!"
-      );
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Something went wrong!"
-      );
-    } finally {
-      setIsLoading(false);
+            toast.success(
+              newStatus
+                ? "User blocked successfully!"
+                : "User unblocked successfully!"
+            );
+
+            router.refresh();
+          } catch (error) {
+            toast.error(
+              error instanceof Error
+                ? error.message
+                : "Something went wrong!"
+            );
+          } finally {
+            setIsLoading(false);
+          }
+        },
+      },
+
+      cancel: {
+        label: "Cancel",
+        onClick: () => {},
+      },
+
+      duration: 10000,
     }
-  };
+  );
+};
 
   return (
     <button
@@ -63,11 +84,13 @@ const UserBlockButton = ({
       {isBlocked ? (
         <>
           <ShieldCheck size={14} />
+
           {isLoading ? "Please wait..." : "Unblock"}
         </>
       ) : (
         <>
           <Ban size={14} />
+
           {isLoading ? "Please wait..." : "Block"}
         </>
       )}

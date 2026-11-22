@@ -1,21 +1,18 @@
+
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-export const getUserStats = async () => {
+export const getUserStats = async (token: string) => {
   const response = await fetch(`${API_URL}/users/stats`, {
-    credentials: "include",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
     cache: "no-store",
   });
 
-  const result = await response.json();
-
-  console.log("User Stats API Response:", result);
-
   if (!response.ok) {
-    throw new Error(result.message || "Failed to get user stats");
+    throw new Error("Failed to fetch user stats");
   }
 
-  return result as {
-    totalVendors: number;
-    totalCustomers: number;
-  };
+  return response.json();
 };

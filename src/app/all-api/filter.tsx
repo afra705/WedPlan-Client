@@ -1,16 +1,16 @@
 
+import { getAuthHeaders } from "@/lib/auth-client";
 import { Service } from "@/type/types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-// Get services with search and filters
+// GET - Public Service Filtering
 export const getFilteredServices = async (
   search: string,
   category: string,
   location: string,
   sort: string
 ): Promise<Service[]> => {
-
   const params = new URLSearchParams();
 
   if (search.trim()) {
@@ -33,24 +33,26 @@ export const getFilteredServices = async (
     `${API_URL}/services?${params.toString()}`
   );
 
-  if (!response.ok) {
-    throw new Error("Failed to fetch filtered services");
-  }
+  const data = await response.json();
 
-  const data: Service[] = await response.json();
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to fetch filtered services");
+  }
 
   return data;
 };
 
+// GET - Admin Manage Services
+// GET - Admin Manage Services
 
+// GET - Admin Manage Services
 
-
-// Get services with search, category and status filters
+// GET - Admin Manage Services
 export const getFilteredManageServices = async (
   search: string,
   category: string,
   status: string
-): Promise<Service[]> => {
+) => {
   const params = new URLSearchParams();
 
   if (search.trim()) {
@@ -65,17 +67,23 @@ export const getFilteredManageServices = async (
     params.append("status", status);
   }
 
+  const authHeaders = await getAuthHeaders();
+
   const response = await fetch(
-    `${API_URL}/services?${params.toString()}`,
+    `${API_URL}/admin/services?${params.toString()}`,
     {
-      // Admin view; let the backend authorize the admin session.
-      credentials: "include",
+      headers: authHeaders,
+      cache: "no-store",
     }
   );
 
+  const data = await response.json();
+
   if (!response.ok) {
-    throw new Error("Failed to fetch services");
+    throw new Error(
+      data.message || "Failed to fetch manage services"
+    );
   }
 
-  return response.json();
+  return data;
 };

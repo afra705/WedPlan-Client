@@ -1,14 +1,20 @@
 
+import { getAuthHeaders } from "@/lib/auth-client";
 import { Booking } from "@/type/bookings";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-// POST - Create Booking
-export const createBooking = async (bookingData: Partial<Booking>) => {
+// POST - Create Booking (Customer)
+export const createBooking = async (
+  bookingData: Partial<Booking>
+) => {
+  const headers = await getAuthHeaders();
+
   const response = await fetch(`${API_URL}/bookings`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      ...headers,
     },
     body: JSON.stringify(bookingData),
   });
@@ -22,32 +28,33 @@ export const createBooking = async (bookingData: Partial<Booking>) => {
   return data;
 };
 
-// GET - Customer Bookings
-export const getMyBookings = async (customerId: string) => {
-  const response = await fetch(
-    `${API_URL}/my-bookings/${encodeURIComponent(customerId)}`
-  );
+// GET - My Bookings (Customer)
+export const getMyBookings = async () => {
+  const headers = await getAuthHeaders();
+
+  const response = await fetch(`${API_URL}/my-bookings`, {
+    headers,
+    cache: "no-store",
+  });
+
+  const data = await response.json();
 
   if (!response.ok) {
-    throw new Error("Failed to fetch bookings");
+    throw new Error(data.message || "Failed to fetch my bookings");
   }
 
-  return response.json();
+  return data;
 };
 
-// PATCH - Cancel Booking
-export const cancelBooking = async (
-  bookingId: string,
-  customerId: string
-) => {
+// PATCH - Cancel Booking (Customer)
+export const cancelBooking = async (bookingId: string) => {
+  const headers = await getAuthHeaders();
+
   const response = await fetch(
     `${API_URL}/bookings/${bookingId}/cancel`,
     {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ customerId }),
+      headers,
     }
   );
 
@@ -60,51 +67,53 @@ export const cancelBooking = async (
   return data;
 };
 
+// GET - Vendor Booking Requests
+export const getVendorBookingRequests = async () => {
+  const headers = await getAuthHeaders();
 
-// vendorbooking
-
-
-
-// Get vendor booking requests
-export const getVendorBookingRequests = async (
-  vendorId: string
-): Promise<Booking[]> => {
   const response = await fetch(
-    `${API_URL}/vendor-booking-requests/${vendorId}`
+    `${API_URL}/vendor-booking-requests`,
+    {
+      headers,
+      cache: "no-store",
+    }
   );
 
+  const data = await response.json();
+
   if (!response.ok) {
-    throw new Error("Failed to fetch booking requests");
+    throw new Error(
+      data.message || "Failed to fetch vendor booking requests"
+    );
   }
 
-  return response.json();
+  return data;
 };
 
-
-// Accept or Reject booking
+// PATCH - Accept / Reject Booking (Vendor)
 export const updateBookingStatus = async (
   bookingId: string,
-  vendorId: string,
   status: "accepted" | "rejected"
 ) => {
+  const headers = await getAuthHeaders();
+
   const response = await fetch(
     `${API_URL}/bookings/${bookingId}/status`,
     {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
+        ...headers,
       },
-      body: JSON.stringify({
-        vendorId,
-        status,
-      }),
+      body: JSON.stringify({ status }),
     }
   );
 
+  const data = await response.json();
+
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || "Failed to update booking");
+    throw new Error(data.message || "Failed to update booking");
   }
 
-  return response.json();
+  return data;
 };

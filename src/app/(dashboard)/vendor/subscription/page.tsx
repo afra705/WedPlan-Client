@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  BriefcaseBusiness,
   Check,
   Crown,
   CreditCard,
@@ -12,19 +13,35 @@ import { toast } from "sonner";
 
 import { useSession } from "@/lib/auth-client";
 import { createCheckoutSession } from "@/app/all-api/payment";
+import {
+  formatSubscriptionExpiry,
+  getActivePlan,
+} from "@/lib/subscription";
 
 const SubscriptionPage = () => {
-  const { data: session, isPending } = useSession();
+  const { data: session, isPending, refetch } = useSession();
 
   const [isLoading, setIsLoading] = useState(false);
 
   // Better Auth user id is also the vendor id used by the rest of the app.
   const vendorId = session?.user?.id;
 
-  // Plan set by the backend (free by default, premium after a verified payment).
-  const currentPlan = (
-    session?.user?.subscriptionPlan || "free"
-  ).toLowerCase();
+  // Plan written by the verified Stripe webhook. Premium only counts while
+  // `subscriptionExpiresAt` is in the future.
+  const currentPlan = getActivePlan(session?.user);
+
+  const renewalDate =
+    currentPlan === "premium"
+      ? formatSubscriptionExpiry(session?.user?.subscriptionExpiresAt)
+      : null;
+
+  // Pull the latest user record when the page opens (for example right after
+  // returning from Stripe) so a newly activated plan shows up immediately.
+  useEffect(() => {
+    if (isPending || currentPlan === "premium") return;
+
+    void refetch();
+  }, [isPending, currentPlan, refetch]);
 
   const plans = [
     {
@@ -100,11 +117,27 @@ const SubscriptionPage = () => {
       </div>
 
       {/* Current Plan */}
-      <div className="mb-8 rounded-2xl border border-[#EAD8DC] bg-white p-5 shadow-sm sm:p-6">
+      <div
+        className={`mb-8 rounded-2xl border p-5 shadow-sm sm:p-6 ${
+          currentPlan === "premium"
+            ? "border-amber-200 bg-amber-50"
+            : "border-[#EAD8DC] bg-white"
+        }`}
+      >
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#F8E9EC]">
-              <Crown className="text-[#8B354B]" size={24} />
+            <div
+              className={`flex h-12 w-12 items-center justify-center rounded-xl ${
+                currentPlan === "premium"
+                  ? "bg-amber-500 text-white"
+                  : "bg-[#F8E9EC] text-[#8B354B]"
+              }`}
+            >
+              {currentPlan === "premium" ? (
+                <Crown size={24} />
+              ) : (
+                <BriefcaseBusiness size={24} />
+              )}
             </div>
 
             <div>
@@ -114,10 +147,22 @@ const SubscriptionPage = () => {
               <h3 className="text-xl font-bold capitalize text-[#4A1F2A]">
                 {currentPlan} Plan
               </h3>
+
+              {renewalDate && (
+                <p className="mt-1 text-xs font-medium text-[#B87965]">
+                  Renews on {renewalDate}
+                </p>
+              )}
             </div>
           </div>
 
-          <span className="rounded-full bg-[#E8F5EB] px-4 py-1.5 text-xs font-semibold text-[#278348]">
+          <span
+            className={`rounded-full px-4 py-1.5 text-xs font-semibold ${
+              currentPlan === "premium"
+                ? "bg-amber-100 text-amber-700"
+                : "bg-[#E8F5EB] text-[#278348]"
+            }`}
+          >
             Active
           </span>
         </div>

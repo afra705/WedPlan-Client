@@ -1,5 +1,5 @@
-// Stripe Premium subscription API wrapper.
-// The Stripe secret key and webhook secret stay on the backend only.
+
+import { getAuthHeaders } from "@/lib/auth-client";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -12,41 +12,45 @@ type CheckoutErrorResponse = {
   message?: string;
 };
 
-// Ask the backend to create a Stripe Checkout session for a vendor.
-export const createCheckoutSession = async (
-  vendorId: string
-): Promise<CheckoutSessionResponse> => {
-  const response = await fetch(
-    `${API_URL}/create-checkout-session`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify({ vendorId }),
-    }
-  );
+export const createCheckoutSession = async (vendorId: string) => {
+  // The backend authenticates the vendor from the Better Auth JWT, not from
+  // the request body. Send the token so `verifyToken` / `verifyVendor` pass.
+  const authHeaders = await getAuthHeaders();
 
-  const data: CheckoutSessionResponse & CheckoutErrorResponse =
-    await response.json();
+  const response = await fetch(`${API_URL}/create-checkout-session`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders,
+    },
+    // Kept for compatibility; the backend prefers the verified JWT user.
+    body: JSON.stringify({ vendorId }),
+  });
 
-  if (!response.ok) {
+  const data: (Partial<CheckoutSessionResponse> &
+    CheckoutErrorResponse) | null = await response
+    .json()
+    .catch(() => null);
+
+  if (!response.ok || !data?.success || typeof data.url !== "string") {
     throw new Error(
-      data.message || "Failed to create checkout session"
+      data?.message || "Failed to create checkout session"
     );
   }
 
-  if (!data.success || !data.url) {
-    throw new Error(
-      "The payment server did not return a checkout link."
-    );
+  // Only ever redirect to a real Stripe HTTPS checkout URL.
+  let checkoutUrl: URL;
+
+  try {
+    checkoutUrl = new URL(data.url);
+  } catch {
+    throw new Error("Invalid checkout URL returned by the server");
   }
 
-  // Stripe Checkout links are always HTTPS.
-  if (!data.url.startsWith("https://")) {
-    throw new Error("Received an invalid checkout link.");
+  if (checkoutUrl.protocol !== "https:") {
+    throw new Error("Invalid checkout URL returned by the server");
   }
 
-  return data;
+  return data as CheckoutSessionResponse;
 };

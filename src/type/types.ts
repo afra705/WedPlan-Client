@@ -10,7 +10,10 @@ export interface DashboardUser {
   /** WedPlan account type. */
   accountType?: AccountType | null;
 }
-
+export type ServiceData = Omit<
+  Service,
+  "_id" | "status" | "createdAt"
+>;
 // service
 
 export type Service = {
