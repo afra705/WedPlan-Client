@@ -4,6 +4,7 @@ import Banner from './shared/Banner';
 import CategoriesSection from './categories/CategoriesSection';
 import FeaturedServices from './featured-service/FeaturedServices';
 import ChooseUsSection from './choose-us.tsx/ChooseUsSection';
+import Footer from './shared/Footer';
 
 
 export const dynamic = "force-dynamic";
@@ -17,6 +18,7 @@ const HomePage = () => {
       <FeaturedServices/>
       <CategoriesSection/>
       <ChooseUsSection/>
+      <Footer/>
     </div>
   );
 };

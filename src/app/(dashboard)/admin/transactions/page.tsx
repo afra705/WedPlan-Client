@@ -257,7 +257,7 @@ try {
                     <th className="px-5 py-4 font-semibold">Plan</th>
                     <th className="px-5 py-4 font-semibold">Amount</th>
                     <th className="px-5 py-4 font-semibold">Date</th>
-                    <th className="px-5 py-4 font-semibold">Session ID</th>
+                    {/* <th className="px-5 py-4 font-semibold">Session ID</th> */}
                     <th className="px-5 py-4 font-semibold">Status</th>
                   </tr>
                 </thead>
@@ -281,9 +281,7 @@ try {
                             {transaction.vendor?.email || "No email"}
                           </p>
 
-                          <p className="mt-1 text-xs font-medium text-[#8B354B]">
-                            {transaction.vendor?.businessName || "No Business Name"}
-                          </p>
+                         
                         </div>
                       </td>
 
@@ -313,15 +311,7 @@ try {
                         </div>
                       </td>
 
-                      {/* Stripe Session ID */}
-                      <td className="px-5 py-5">
-                        <p
-                          title={transaction.stripeSessionId}
-                          className="max-w-[180px] truncate text-xs text-[#8B7478]"
-                        >
-                          {transaction.stripeSessionId}
-                        </p>
-                      </td>
+                      
 
                       {/* Status */}
                       <td className="px-5 py-5">

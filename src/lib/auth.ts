@@ -5,7 +5,34 @@ import { mongodbAdapter } from "@better-auth/mongo-adapter";
 import { admin, jwt } from "better-auth/plugins";
 import { getOAuthState } from "better-auth/api";
 
-const client = new MongoClient(process.env.MONGODB_URL as string);
+const uri = process.env.MONGODB_URL;
+
+if (!uri) {
+  throw new Error("MONGODB_URL is missing");
+}
+
+// Reuse MongoDB connection across requests and hot reloads
+const globalForMongo = globalThis as typeof globalThis & {
+  mongoClient?: MongoClient;
+  mongoClientPromise?: Promise<MongoClient>;
+};
+
+const client =
+  globalForMongo.mongoClient ??
+  new MongoClient(uri);
+
+if (!globalForMongo.mongoClient) {
+  globalForMongo.mongoClient = client;
+}
+
+const clientPromise =
+  globalForMongo.mongoClientPromise ??
+  client.connect();
+
+globalForMongo.mongoClientPromise = clientPromise;
+
+await clientPromise;
+
 const db = client.db("wedplan");
 
 export const auth = betterAuth({
@@ -37,27 +64,23 @@ export const auth = betterAuth({
         defaultValue: "customer",
         input: true,
       },
-
       isBlocked: {
         type: "boolean",
         required: false,
         defaultValue: false,
         input: false,
       },
-
       businessName: {
         type: "string",
         required: false,
         input: false,
       },
-
       subscriptionPlan: {
         type: "string",
         required: false,
         defaultValue: "free",
         input: false,
       },
-
       subscriptionExpiresAt: {
         type: "date",
         required: false,
