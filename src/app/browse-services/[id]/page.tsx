@@ -302,13 +302,12 @@ const ServiceDetailsPage = async ({ params }: Props) => {
                   </p>
                 </div>
               </div>
-{/* form  */}
-           
-<BookingForm
-  serviceId={service._id}
-  vendorId={service.vendorId}
-  vendorEmail={service.vendorEmail}
-/>
+            {/* form  */} 
+            <BookingForm
+              serviceId={service._id}
+              vendorId={service.vendorId}
+              vendorEmail={service.vendorEmail}
+            />
               <div className="flex items-start gap-2 border-t border-[#F0E5E7] bg-[#FCF9F9] px-6 py-4 text-[11px] leading-5 text-[#8B7478]">
                 <ShieldCheck
                   size={15}

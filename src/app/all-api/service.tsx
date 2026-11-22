@@ -110,7 +110,7 @@ export const updateServiceStatus = async (
   id: string,
   status: "pending" | "approved" | "rejected"
 ) => {
-  // তোমার existing code একই থাকবে
+ 
 
   const headers = await getAuthHeaders();
 
@@ -134,6 +134,37 @@ export const updateServiceStatus = async (
 
   return result;
 };
+
+// PATCH - Update Service Availability (Admin)
+export const updateServiceAvailability = async (
+  id: string,
+  isActive: boolean
+) => {
+  const headers = await getAuthHeaders();
+
+  const response = await fetch(
+    `${API_URL}/services/${id}/availability`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...headers,
+      },
+      body: JSON.stringify({ isActive }),
+    }
+  );
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      result.message || "Failed to update service availability"
+    );
+  }
+
+  return result;
+};
+
 
 // GET - My Services (Vendor)
 // GET - My Services (Vendor)

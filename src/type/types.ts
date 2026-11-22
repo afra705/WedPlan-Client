@@ -27,6 +27,7 @@ export type Service = {
   description: string;
   price: number;
   location: string;
+    isActive?: boolean;
   images: string[];
   status: "pending" | "approved" | "rejected";
   createdAt: string;

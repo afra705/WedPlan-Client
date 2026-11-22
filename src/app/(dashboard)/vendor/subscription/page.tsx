@@ -23,11 +23,10 @@ const SubscriptionPage = () => {
 
   const [isLoading, setIsLoading] = useState(false);
 
-  // Better Auth user id is also the vendor id used by the rest of the app.
+  
   const vendorId = session?.user?.id;
 
-  // Plan written by the verified Stripe webhook. Premium only counts while
-  // `subscriptionExpiresAt` is in the future.
+
   const currentPlan = getActivePlan(session?.user);
 
   const renewalDate =
@@ -35,8 +34,7 @@ const SubscriptionPage = () => {
       ? formatSubscriptionExpiry(session?.user?.subscriptionExpiresAt)
       : null;
 
-  // Pull the latest user record when the page opens (for example right after
-  // returning from Stripe) so a newly activated plan shows up immediately.
+
   useEffect(() => {
     if (isPending || currentPlan === "premium") return;
 

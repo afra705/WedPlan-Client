@@ -36,18 +36,25 @@ const BookingForm = ({
     e.preventDefault();
 
     // Check login
-    if (!session?.user?.email) {
-      toast.error("Please login first!");
-      return;
-    }
+   // Check login
+if (!session?.user?.email) {
+  toast.error("Please login first!");
+  return;
+}
 
-    // Prevent booking own service
-    if (
-      session.user.email.toLowerCase() === vendorEmail.toLowerCase()
-    ) {
-      toast.error("You cannot book your own service!");
-      return;
-    }
+// Only customers can book
+if (session.user.role !== "customer") {
+  toast.error("Only customers can book services!");
+  return;
+}
+
+// Prevent booking own service
+if (
+  session.user.email.toLowerCase() === vendorEmail.toLowerCase()
+) {
+  toast.error("You cannot book your own service!");
+  return;
+}
 
     // Check required fields
     if (!eventDate || !eventLocation.trim()) {
@@ -72,17 +79,15 @@ const BookingForm = ({
       toast.success("Booking request submitted successfully!");
 
       router.push("/customer/my-bookings");
-    } catch (error) {
-      console.error("Booking error:", error);
-
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to submit booking!"
-      );
-    } finally {
-      setLoading(false);
-    }
+} catch (error) {
+  toast.error(
+    error instanceof Error
+      ? error.message
+      : "Failed to submit booking!"
+  );
+} finally {
+  setLoading(false);
+}
   };
 
   return (

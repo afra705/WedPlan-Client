@@ -18,7 +18,7 @@ import {
 import type { Service } from "@/type/types";
 import {
   updateServiceStatus,
-
+  updateServiceAvailability,
 } from "@/app/all-api/service";
 import { toast } from "sonner";
 import DeleteServices from "./DeleteServices";
@@ -31,20 +31,19 @@ type Props = {
 const ManageServicesTable = ({ services: initialServices }: Props) => {
   const [services, setServices] = useState<Service[]>(initialServices);
 
-  // Search and filter states
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
 
   const [loading, setLoading] = useState(false);
 
-  // Modal and status update states
   const [selectedService, setSelectedService] =
     useState<Service | null>(null);
 
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [availabilityUpdatingId, setAvailabilityUpdatingId] =
+    useState<string | null>(null);
 
-  // Categories from initial services
   const categories = Array.from(
     new Set(initialServices.map((service) => service.category).filter(Boolean))
   );
@@ -70,7 +69,6 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
       }
     };
 
-    // Debounce search request
     const timer = setTimeout(() => {
       fetchFilteredServices();
     }, 300);
@@ -78,7 +76,7 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
     return () => clearTimeout(timer);
   }, [search, categoryFilter, statusFilter]);
 
-  // Update Service Status
+  // Update Service Status (Admin)
   const handleStatusChange = async (
     id: string,
     status: "pending" | "approved" | "rejected"
@@ -106,7 +104,6 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
 
       toast.success(`Service ${status} successfully!`);
 
-      // Refresh filtered services from backend
       const data = await getFilteredManageServices(
         search,
         categoryFilter,
@@ -115,7 +112,6 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
 
       setServices(data);
 
-      // Update selected service in modal
       setSelectedService((previous) =>
         previous?._id === id
           ? { ...previous, status }
@@ -126,6 +122,55 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
       toast.error("Failed to update service status!");
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  // Update Service Availability (Admin)
+  const handleAvailabilityChange = async (
+    service: Service
+  ) => {
+    const id = service._id;
+    const newIsActive = service.isActive === false;
+
+    if (service.status !== "approved") {
+      toast.info("Only approved services can change availability!");
+      return;
+    }
+
+    if (availabilityUpdatingId === id) return;
+
+    try {
+      setAvailabilityUpdatingId(id);
+
+      await updateServiceAvailability(id, newIsActive);
+
+      setServices((previousServices) =>
+        previousServices.map((item) =>
+          item._id === id
+            ? { ...item, isActive: newIsActive }
+            : item
+        )
+      );
+
+      setSelectedService((previous) =>
+        previous?._id === id
+          ? { ...previous, isActive: newIsActive }
+          : previous
+      );
+
+      toast.success(
+        `Service ${newIsActive ? "activated" : "deactivated"} successfully!`
+      );
+    } catch (error) {
+      console.error("Availability update error:", error);
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to update service availability!"
+      );
+    } finally {
+      setAvailabilityUpdatingId(null);
     }
   };
 
@@ -146,7 +191,6 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
 
         <div className="rounded-xl border border-[#F0E5E7] bg-white p-5">
           <p className="text-sm text-[#8B7478]">Total Services</p>
-
           <h3 className="mt-2 text-2xl font-bold text-[#4A1F2A]">
             {services.length}
           </h3>
@@ -154,7 +198,6 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
 
         <div className="rounded-xl border border-[#F0E5E7] bg-white p-5">
           <p className="text-sm text-[#8B7478]">Pending Review</p>
-
           <h3 className="mt-2 text-2xl font-bold text-orange-500">
             {pendingCount}
           </h3>
@@ -162,7 +205,6 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
 
         <div className="rounded-xl border border-[#F0E5E7] bg-white p-5">
           <p className="text-sm text-[#8B7478]">Approved Services</p>
-
           <h3 className="mt-2 text-2xl font-bold text-green-600">
             {approvedCount}
           </h3>
@@ -199,7 +241,6 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
 
             {/* Search */}
             <div className="relative">
-
               <Search
                 size={18}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A89599]"
@@ -212,12 +253,10 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
                 placeholder="Search service or vendor..."
                 className="w-full rounded-xl border border-[#EDE1E4] py-3 pl-10 pr-4 text-sm outline-none transition focus:border-[#A65B6D]"
               />
-
             </div>
 
             {/* Status Filter */}
             <div className="relative">
-
               <Filter
                 size={17}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A89599]"
@@ -233,12 +272,10 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
                 <option value="approved">Approved</option>
                 <option value="rejected">Rejected</option>
               </select>
-
             </div>
 
             {/* Category Filter */}
             <div>
-
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
@@ -251,13 +288,10 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
                     {category}
                   </option>
                 ))}
-
               </select>
-
             </div>
 
           </div>
-
         </div>
 
         {/* Table */}
@@ -274,7 +308,6 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
         ) : services.length === 0 ? (
 
           <div className="py-16 text-center">
-
             <BriefcaseBusiness className="mx-auto h-12 w-12 text-[#C9B5BA]" />
 
             <h3 className="mt-3 font-semibold text-[#4A1F2A]">
@@ -284,14 +317,12 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
             <p className="mt-1 text-sm text-[#8B7478]">
               No services match your search or filters.
             </p>
-
           </div>
 
         ) : (
 
           <div className="overflow-x-auto">
-
-            <table className="w-full min-w-[1050px] text-left">
+            <table className="w-full min-w-[1150px] text-left">
 
               <thead>
                 <tr className="border-b border-[#F0E5E7] bg-[#FCF9F9] text-xs uppercase tracking-wider text-[#8B7478]">
@@ -300,18 +331,19 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
                   <th className="px-5 py-4">Category</th>
                   <th className="px-5 py-4">Price</th>
                   <th className="px-5 py-4">Status</th>
+                  <th className="px-5 py-4">Availability</th>
                   <th className="px-5 py-4">Actions</th>
                 </tr>
               </thead>
 
               <tbody>
-
                 {services.map((service) => {
-
                   const image = service.image || service.images?.[0];
+                  const isActive = service.isActive !== false;
+                  const isUpdatingAvailability =
+                    availabilityUpdatingId === service._id;
 
                   return (
-
                     <tr
                       key={service._id}
                       className="border-b border-[#F5ECEE] transition hover:bg-[#FDF9FA]"
@@ -319,11 +351,9 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
 
                       {/* Service */}
                       <td className="px-5 py-4">
-
                         <div className="flex items-center gap-3">
 
                           <div className="relative h-14 w-16 shrink-0 overflow-hidden rounded-lg bg-[#F8EDF0]">
-
                             {image ? (
                               <Image
                                 src={image}
@@ -335,11 +365,9 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
                             ) : (
                               <BriefcaseBusiness className="m-auto mt-4 h-6 w-6 text-[#C9B5BA]" />
                             )}
-
                           </div>
 
                           <div className="max-w-[180px]">
-
                             <p className="font-semibold text-[#4A1F2A]">
                               {service.serviceName}
                             </p>
@@ -347,7 +375,6 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
                             <p className="mt-1 line-clamp-1 text-xs text-[#8B7478]">
                               {service.description}
                             </p>
-
                           </div>
 
                         </div>
@@ -355,13 +382,10 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
 
                       {/* Vendor */}
                       <td className="px-5 py-4">
-
                         <div className="flex items-center gap-2">
-
                           <User size={16} className="text-[#A65B6D]" />
 
                           <div>
-
                             <p className="text-sm font-medium text-[#4A1F2A]">
                               {service.vendorName || "Unknown"}
                             </p>
@@ -369,33 +393,26 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
                             <p className="text-xs text-[#8B7478]">
                               {service.vendorEmail}
                             </p>
-
                           </div>
-
                         </div>
                       </td>
 
                       {/* Category */}
                       <td className="px-5 py-4">
-
                         <span className="rounded-lg bg-[#F8EDF0] px-3 py-1.5 text-xs font-medium text-[#8B354B]">
                           {service.category}
                         </span>
-
                       </td>
 
                       {/* Price */}
                       <td className="px-5 py-4">
-
                         <p className="font-semibold text-[#4A1F2A]">
                           ${Number(service.price || 0).toLocaleString()}
                         </p>
-
                       </td>
 
                       {/* Status */}
                       <td className="px-5 py-4">
-
                         <span
                           className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold capitalize ${
                             service.status === "approved"
@@ -405,7 +422,6 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
                                 : "bg-orange-50 text-orange-600"
                           }`}
                         >
-
                           {service.status === "approved" ? (
                             <CheckCircle2 size={14} />
                           ) : service.status === "rejected" ? (
@@ -415,14 +431,65 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
                           )}
 
                           {service.status}
-
                         </span>
+                      </td>
 
+                      {/* Availability Toggle */}
+                      <td className="px-5 py-4">
+                        {service.status === "approved" ? (
+                          <div className="flex items-center gap-2">
+
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={isActive}
+                              aria-label={`Turn ${service.serviceName} ${
+                                isActive ? "inactive" : "active"
+                              }`}
+                              title={isActive ? "Deactivate service" : "Activate service"}
+                              disabled={isUpdatingAvailability}
+                              onClick={() =>
+                                handleAvailabilityChange(service)
+                              }
+                              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
+                                isActive
+                                  ? "bg-green-600"
+                                  : "bg-gray-300"
+                              }`}
+                            >
+                              <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${
+                                  isActive
+                                    ? "translate-x-6"
+                                    : "translate-x-1"
+                                }`}
+                              />
+                            </button>
+
+                            <span
+                              className={`text-xs font-semibold ${
+                                isActive
+                                  ? "text-green-600"
+                                  : "text-gray-500"
+                              }`}
+                            >
+                              {isUpdatingAvailability
+                                ? "Updating..."
+                                : isActive
+                                  ? "Active"
+                                  : "Inactive"}
+                            </span>
+
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">
+                            Approve first
+                          </span>
+                        )}
                       </td>
 
                       {/* Actions */}
                       <td className="px-5 py-4">
-
                         <div className="flex items-center gap-2">
 
                           {/* View */}
@@ -485,41 +552,31 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
                           />
 
                         </div>
-
                       </td>
 
                     </tr>
-
                   );
                 })}
-
               </tbody>
-
             </table>
-
           </div>
-
         )}
 
         {/* Footer */}
         <div className="border-t border-[#F0E5E7] px-5 py-4">
-
           <p className="text-xs text-[#8B7478]">
             Showing {services.length} services
           </p>
-
         </div>
 
       </div>
 
       {/* View Service Modal */}
       {selectedService && (
-
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
           onClick={() => setSelectedService(null)}
         >
-
           <div
             className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-xl"
             onClick={(e) => e.stopPropagation()}
@@ -527,7 +584,6 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
 
             {/* Header */}
             <div className="flex items-center justify-between border-b border-[#F0E5E7] px-6 py-4">
-
               <h2 className="text-xl font-bold text-[#4A1F2A]">
                 Service Details
               </h2>
@@ -539,7 +595,6 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
               >
                 <X size={20} />
               </button>
-
             </div>
 
             {/* Body */}
@@ -547,9 +602,7 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
 
               {/* Service Image */}
               <div className="relative h-52 w-full overflow-hidden rounded-xl bg-[#F8EDF0]">
-
                 {(selectedService.image || selectedService.images?.[0]) ? (
-
                   <Image
                     src={
                       selectedService.image ||
@@ -561,20 +614,15 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
                     unoptimized
                     className="object-cover"
                   />
-
                 ) : (
-
                   <div className="flex h-full items-center justify-center text-[#C9B5BA]">
                     <BriefcaseBusiness size={40} />
                   </div>
-
                 )}
-
               </div>
 
               {/* Service Name & Description */}
               <div>
-
                 <h3 className="text-xl font-bold text-[#4A1F2A]">
                   {selectedService.serviceName}
                 </h3>
@@ -582,7 +630,6 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
                 <p className="mt-1 text-sm text-[#8B7478]">
                   {selectedService.description}
                 </p>
-
               </div>
 
               {/* Details */}
@@ -590,7 +637,6 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
 
                 <div className="rounded-xl bg-[#FCF9F9] p-4">
                   <p className="text-xs text-[#8B7478]">Category</p>
-
                   <p className="mt-1 font-semibold text-[#4A1F2A]">
                     {selectedService.category}
                   </p>
@@ -598,7 +644,6 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
 
                 <div className="rounded-xl bg-[#FCF9F9] p-4">
                   <p className="text-xs text-[#8B7478]">Price</p>
-
                   <p className="mt-1 font-semibold text-[#4A1F2A]">
                     ${Number(selectedService.price || 0).toLocaleString()}
                   </p>
@@ -606,7 +651,6 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
 
                 <div className="rounded-xl bg-[#FCF9F9] p-4">
                   <p className="text-xs text-[#8B7478]">Vendor Name</p>
-
                   <p className="mt-1 font-semibold text-[#4A1F2A]">
                     {selectedService.vendorName || "Unknown"}
                   </p>
@@ -614,7 +658,6 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
 
                 <div className="rounded-xl bg-[#FCF9F9] p-4">
                   <p className="text-xs text-[#8B7478]">Vendor Email</p>
-
                   <p className="mt-1 break-all text-sm font-semibold text-[#4A1F2A]">
                     {selectedService.vendorEmail}
                   </p>
@@ -624,7 +667,6 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
 
               {/* Status */}
               <div className="rounded-xl bg-[#FCF9F9] p-4">
-
                 <p className="text-xs text-[#8B7478]">
                   Service Status
                 </p>
@@ -632,14 +674,31 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
                 <p className="mt-1 font-semibold capitalize text-[#8B354B]">
                   {selectedService.status}
                 </p>
+              </div>
 
+              {/* Availability */}
+              <div className="rounded-xl bg-[#FCF9F9] p-4">
+                <p className="text-xs text-[#8B7478]">
+                  Service Availability
+                </p>
+
+                <p
+                  className={`mt-1 font-semibold ${
+                    selectedService.isActive === false
+                      ? "text-gray-500"
+                      : "text-green-600"
+                  }`}
+                >
+                  {selectedService.isActive === false
+                    ? "Inactive"
+                    : "Active"}
+                </p>
               </div>
 
             </div>
 
             {/* Footer */}
             <div className="border-t border-[#F0E5E7] p-5">
-
               <button
                 type="button"
                 onClick={() => setSelectedService(null)}
@@ -647,13 +706,10 @@ const ManageServicesTable = ({ services: initialServices }: Props) => {
               >
                 Close
               </button>
-
             </div>
 
           </div>
-
         </div>
-
       )}
 
     </div>
