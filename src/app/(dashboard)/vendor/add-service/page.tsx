@@ -3,7 +3,13 @@
 
 "use client";
 
-import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -39,13 +45,14 @@ const categories = [
 ];
 
 const FREE_SERVICE_LIMIT = 3;
+const MAX_IMAGES = 4;
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
 const AddServicePage = () => {
   const router = useRouter();
 
   const { data: session, isPending } = authClient.useSession();
 
-  // User information
   const user = session?.user as
     | {
         role?: string | null;
@@ -72,8 +79,13 @@ const AddServicePage = () => {
     location: "",
   });
 
-  const [image, setImage] = useState<File | null>(null);
-  const [preview, setPreview] = useState("");
+  // Multiple image states
+  const [images, setImages] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
+
+  // Keep track of object URLs for cleanup
+  const previewsRef = useRef<string[]>([]);
+
   const [loading, setLoading] = useState(false);
 
   // Authentication check
@@ -109,14 +121,12 @@ const AddServicePage = () => {
           return;
         }
 
-        // Generate actual JWT
         const token = await getJwtToken();
 
         if (token.split(".").length !== 3) {
           throw new Error("Invalid JWT format.");
         }
 
-        // Fetch services using JWT
         const services = await getVendorServices(token);
 
         if (cancelled) return;
@@ -150,24 +160,18 @@ const AddServicePage = () => {
     return () => {
       cancelled = true;
     };
-  }, [
-    isPending,
-    session,
-    isVendorUser,
-    isPremium,
-    router,
-  ]);
+  }, [isPending, session, isVendorUser, isPremium, router]);
 
-  // Preview URL cleanup
+  // Cleanup remaining preview URLs on unmount
   useEffect(() => {
     return () => {
-      if (preview) {
-        URL.revokeObjectURL(preview);
-      }
+      previewsRef.current.forEach((url) => {
+        URL.revokeObjectURL(url);
+      });
     };
-  }, [preview]);
+  }, []);
 
-  // Handle input changes
+  // Handle text inputs
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
@@ -179,38 +183,79 @@ const AddServicePage = () => {
     }));
   };
 
-  // Select image
+  // Handle multiple image selection
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const files = Array.from(e.target.files || []);
 
-    if (!file) return;
+    if (!files.length) return;
 
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please select a valid image.");
+    if (images.length + files.length > MAX_IMAGES) {
+      toast.error("You can upload maximum 4 images.");
       e.target.value = "";
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image size must be less than 5MB.");
-      e.target.value = "";
-      return;
+    const validFiles: File[] = [];
+
+    for (const file of files) {
+      if (!file.type.startsWith("image/")) {
+        toast.error(`${file.name} is not a valid image.`);
+        continue;
+      }
+
+      if (file.size > MAX_IMAGE_SIZE) {
+        toast.error(`${file.name} must be less than 5MB.`);
+        continue;
+      }
+
+      validFiles.push(file);
     }
 
-    setImage(file);
-    setPreview(URL.createObjectURL(file));
+    if (validFiles.length > 0) {
+      const newPreviews = validFiles.map((file) =>
+        URL.createObjectURL(file)
+      );
+
+      const updatedPreviews = [...previewsRef.current, ...newPreviews];
+
+      previewsRef.current = updatedPreviews;
+
+      setImages((prev) => [...prev, ...validFiles]);
+      setPreviews(updatedPreviews);
+    }
+
+    // Allow selecting the same file again
+    e.target.value = "";
   };
 
-  // Remove image
-  const handleRemoveImage = () => {
-    setImage(null);
-    setPreview("");
+  // Remove individual image
+  const handleRemoveImage = (index: number) => {
+    const previewToRemove = previewsRef.current[index];
 
-    const input = document.getElementById(
-      "service-image"
-    ) as HTMLInputElement | null;
+    if (previewToRemove) {
+      URL.revokeObjectURL(previewToRemove);
+    }
 
-    if (input) input.value = "";
+    const updatedPreviews = previewsRef.current.filter(
+      (_, i) => i !== index
+    );
+
+    previewsRef.current = updatedPreviews;
+
+    setImages((prev) => prev.filter((_, i) => i !== index));
+    setPreviews(updatedPreviews);
+  };
+
+  // Remove all images
+  const handleRemoveAllImages = () => {
+    previewsRef.current.forEach((url) => {
+      URL.revokeObjectURL(url);
+    });
+
+    previewsRef.current = [];
+
+    setImages([]);
+    setPreviews([]);
   };
 
   // Submit service
@@ -263,22 +308,30 @@ const AddServicePage = () => {
         throw new Error("Invalid authentication token.");
       }
 
-      // Step 2: Upload image to ImgBB
-      let imageUrl = "";
+      // Step 2: Upload all selected images to ImgBB
+      let imageUrls: string[] = [];
 
-      if (image) {
+      if (images.length > 0) {
         try {
-          imageUrl = await uploadServiceImage(image);
+          imageUrls = await Promise.all(
+            images.map((file) => uploadServiceImage(file))
+          );
         } catch (uploadError) {
           console.error("ImgBB upload error:", uploadError);
 
           throw new Error(
-            "Image upload failed. Please try a JPG, PNG or WEBP image under 5MB."
+            "Image upload failed. Please try JPG, PNG or WEBP images under 5MB."
           );
         }
 
-        if (!imageUrl || !imageUrl.startsWith("https://")) {
-          throw new Error("Image upload failed. Please try again.");
+        // Validate uploaded image URLs
+        if (
+          imageUrls.length !== images.length ||
+          imageUrls.some(
+            (url) => !url || !url.startsWith("https://")
+          )
+        ) {
+          throw new Error("One or more images failed to upload.");
         }
       }
 
@@ -292,8 +345,12 @@ const AddServicePage = () => {
         description: formData.description.trim(),
         price,
         location: formData.location.trim(),
-        image: imageUrl,
-        images: imageUrl ? [imageUrl] : [],
+
+        // First image = Main image
+        image: imageUrls[0] || "",
+
+        // Remaining images = Additional images
+        images: imageUrls.slice(1),
       };
 
       // Step 4: Save service using JWT
@@ -317,7 +374,7 @@ const AddServicePage = () => {
         location: "",
       });
 
-      handleRemoveImage();
+      handleRemoveAllImages();
 
       router.push("/vendor/my-services");
     } catch (error) {
@@ -519,77 +576,115 @@ const AddServicePage = () => {
                 />
               </div>
 
-              {/* Image Upload */}
+              {/* Multiple Image Upload */}
               <div>
-                <label className="mb-2 block text-sm font-semibold text-[#4A1F2A]">
-                  Service Image
-                  <span className="ml-1 text-xs font-normal text-[#9B8588]">
-                    (Optional)
-                  </span>
-                </label>
-
-                <div className="relative">
-                  <input
-                    id="service-image"
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    onChange={handleImageChange}
-                    className="hidden"
-                  />
-
-                  {preview ? (
-                    <div className="relative overflow-hidden rounded-xl border border-[#E7D5CC] bg-[#FFFCFA]">
-                      <div className="relative h-64 w-full">
-                        <Image
-                          src={preview}
-                          alt="Service preview"
-                          fill
-                          unoptimized
-                          className="object-cover"
-                        />
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={handleRemoveImage}
-                        className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#722F3E] shadow-md transition hover:bg-[#FAF5F0]"
-                      >
-                        <X size={18} />
-                      </button>
-
-                      <div className="flex items-center gap-2 px-4 py-3 text-sm text-[#722F3E]">
-                        <CheckCircle2 size={17} />
-                        {image?.name}
-                      </div>
-                    </div>
-                  ) : (
-                    <label
-                      htmlFor="service-image"
-                      className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#DCC5BB] bg-[#FFFCFA] px-5 py-10 text-center transition hover:border-[#722F3E] hover:bg-[#FAF5F0]"
-                    >
-                      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F3E7E2] text-[#722F3E]">
-                        <ImagePlus size={26} />
-                      </div>
-
-                      <p className="text-sm font-semibold text-[#4A1F2A]">
-                        Click to upload your service image
-                      </p>
-
-                      <p className="mt-2 text-xs text-[#9B8588]">
-                        PNG, JPG or WEBP (Maximum 5MB)
-                      </p>
-
-                      <div className="mt-5 flex items-center gap-2 rounded-lg bg-[#722F3E] px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-[#4A1F2A]">
-                        <UploadCloud size={15} />
-                        Choose Image
-                      </div>
+                <div className="mb-3 flex items-center justify-between">
+                  <div>
+                    <label className="block text-sm font-semibold text-[#4A1F2A]">
+                      Service Images
+                      <span className="ml-1 text-xs font-normal text-[#9B8588]">
+                        (Optional)
+                      </span>
                     </label>
-                  )}
+
+                    <p className="mt-1 text-xs text-[#9B8588]">
+                      Upload up to 4 images to showcase your service.
+                    </p>
+                  </div>
+
+                  <span className="rounded-full bg-[#F3E7E2] px-3 py-1.5 text-xs font-semibold text-[#722F3E]">
+                    {images.length}/4 Images
+                  </span>
                 </div>
 
-                <p className="mt-2 text-xs text-[#9B8588]">
-                  Your selected image will be uploaded to ImgBB when you submit the service.
-                </p>
+                {/* Image Preview Grid */}
+                {previews.length > 0 && (
+                  <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    {previews.map((preview, index) => (
+                      <div
+                        key={preview}
+                        className="group relative overflow-hidden rounded-xl border border-[#E7D5CC] bg-[#FFFCFA]"
+                      >
+                        <div className="relative aspect-square">
+                          <Image
+                            src={preview}
+                            alt={`Service image ${index + 1}`}
+                            fill
+                            unoptimized
+                            className="object-cover"
+                          />
+
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveImage(index)}
+                            aria-label={`Remove image ${index + 1}`}
+                            className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#722F3E] shadow-md transition hover:bg-[#722F3E] hover:text-white"
+                          >
+                            <X size={16} />
+                          </button>
+
+                          <span className="absolute bottom-2 left-2 rounded-md bg-[#4A1F2A]/85 px-2 py-1 text-[10px] font-semibold text-white">
+                            {index === 0 ? "Main Image" : `Image ${index + 1}`}
+                          </span>
+                        </div>
+
+                        <div className="truncate px-2 py-2 text-xs text-[#8B7478]">
+                          {images[index]?.name}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Upload Input */}
+                {images.length < MAX_IMAGES && (
+                  <label
+                    htmlFor="service-images"
+                    className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#DCC5BB] bg-[#FFFCFA] px-5 py-9 text-center transition hover:border-[#722F3E] hover:bg-[#FAF5F0]"
+                  >
+                    <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F3E7E2] text-[#722F3E]">
+                      <ImagePlus size={26} />
+                    </div>
+
+                    <p className="text-sm font-semibold text-[#4A1F2A]">
+                      Click to upload service images
+                    </p>
+
+                    <p className="mt-2 text-xs text-[#9B8588]">
+                      PNG, JPG or WEBP · Maximum 5MB per image
+                    </p>
+
+                    <div className="mt-4 flex items-center gap-2 rounded-lg bg-[#722F3E] px-4 py-2.5 text-xs font-semibold text-white">
+                      <UploadCloud size={15} />
+                      Choose Images ({MAX_IMAGES - images.length} remaining)
+                    </div>
+                  </label>
+                )}
+
+                <input
+                  id="service-images"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  multiple
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+
+                {images.length > 0 && (
+                  <div className="mt-3 flex items-center justify-between">
+                    <p className="text-xs text-[#4F7A46]">
+                      {images.length} image(s) selected successfully.
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={handleRemoveAllImages}
+                      className="text-xs font-semibold text-[#A65B6D] transition hover:text-[#722F3E]"
+                    >
+                      Remove all
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Submit */}
@@ -602,7 +697,9 @@ const AddServicePage = () => {
                   {loading ? (
                     <>
                       <Loader2 size={18} className="animate-spin" />
-                      {image ? "Uploading & Submitting..." : "Submitting..."}
+                      {images.length > 0
+                        ? "Uploading Images & Submitting..."
+                        : "Submitting..."}
                     </>
                   ) : (
                     <>

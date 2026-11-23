@@ -55,8 +55,10 @@ const MyServicesPage = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Image file
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  // Multiple image states
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [existingImages, setExistingImages] = useState<string[]>([]);
 
   // Form data
   const [formData, setFormData] = useState({
@@ -69,41 +71,42 @@ const MyServicesPage = () => {
   });
 
   // Load logged-in vendor services
- useEffect(() => {
-  if (isPending) return;
+  useEffect(() => {
+    if (isPending) return;
 
-  const loadServices = async () => {
-    if (!vendorId) {
-      setServices([]);
-      setLoading(false);
-      return;
-    }
+    const loadServices = async () => {
+      if (!vendorId) {
+        setServices([]);
+        setLoading(false);
+        return;
+      }
 
-    setLoading(true);
+      setLoading(true);
 
-    try {
-      const token = await getJwtToken();
+      try {
+        const token = await getJwtToken();
 
-      console.log("Token exists:", !!token);
-      console.log("Token parts:", token.split(".").length);
+        if (!token) {
+          throw new Error("Authentication token not found");
+        }
 
-      const data = await getVendorServices(token);
-      setServices(data);
-    } catch (error) {
-      console.error("Load services error:", error);
+        const data = await getVendorServices(token);
+        setServices(data);
+      } catch (error) {
+        console.error("Load services error:", error);
 
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to load services"
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to load services"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  loadServices();
-}, [vendorId, isPending]);
+    loadServices();
+  }, [vendorId, isPending]);
 
   // Input change
   const handleChange = (
@@ -117,30 +120,86 @@ const MyServicesPage = () => {
     }));
   };
 
-  // Select image
-  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  // Select multiple images
+  const handleMultipleImageChange = (
+    e: ChangeEvent<HTMLInputElement>
+  ) => {
+    const files = Array.from(e.target.files || []);
 
-    if (!file) return;
+    if (!files.length) return;
 
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please select an image file");
-      e.target.value = "";
-      return;
+    const validFiles: File[] = [];
+
+    for (const file of files) {
+      if (!file.type.startsWith("image/")) {
+        toast.error(`${file.name} is not a valid image`);
+        continue;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error(`${file.name} exceeds 5MB`);
+        continue;
+      }
+
+      validFiles.push(file);
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image size must be less than 5MB");
-      e.target.value = "";
-      return;
+    const availableSlots = 4 - imagePreviews.length;
+    const selectedFiles = validFiles.slice(0, availableSlots);
+
+    if (validFiles.length > availableSlots) {
+      toast.error("You can upload a maximum of 4 images");
     }
 
-    setImageFile(file);
+    if (selectedFiles.length > 0) {
+      setImageFiles((previous) => [...previous, ...selectedFiles]);
+
+      setImagePreviews((previous) => [
+        ...previous,
+        ...selectedFiles.map((file) => URL.createObjectURL(file)),
+      ]);
+    }
+
+    e.target.value = "";
+  };
+
+  // Remove image
+  const handleRemoveImage = (index: number) => {
+    const removedPreview = imagePreviews[index];
+
+    if (removedPreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(removedPreview);
+    }
+
+    setImagePreviews((previous) =>
+      previous.filter((_, i) => i !== index)
+    );
+
+    setExistingImages((previous) =>
+      previous.filter((_, i) => i !== index)
+    );
+
+    setImageFiles((previous) => {
+      const newFiles = [...previous];
+      const newFileIndex = index - existingImages.length;
+
+      if (newFileIndex >= 0) {
+        newFiles.splice(newFileIndex, 1);
+      }
+
+      return newFiles;
+    });
   };
 
   // Open edit modal
   const handleEdit = (service: Service) => {
     setSelectedService(service);
+
+    const currentImages = service.images?.length
+      ? service.images.slice(0, 4)
+      : service.image
+        ? [service.image]
+        : [];
 
     setFormData({
       serviceName: service.serviceName,
@@ -151,8 +210,35 @@ const MyServicesPage = () => {
       image: service.image || "",
     });
 
-    setImageFile(null);
+    setExistingImages(currentImages);
+    setImagePreviews(currentImages);
+    setImageFiles([]);
+
     setIsEditModalOpen(true);
+  };
+
+  // Reset edit modal
+  const resetEditModal = () => {
+    imagePreviews.forEach((preview) => {
+      if (preview.startsWith("blob:")) {
+        URL.revokeObjectURL(preview);
+      }
+    });
+
+    setIsEditModalOpen(false);
+    setSelectedService(null);
+    setImageFiles([]);
+    setImagePreviews([]);
+    setExistingImages([]);
+
+    setFormData({
+      serviceName: "",
+      category: "",
+      description: "",
+      price: "",
+      location: "",
+      image: "",
+    });
   };
 
   // Update service
@@ -161,7 +247,10 @@ const MyServicesPage = () => {
 
     if (!selectedService) return;
 
-    if (Number(formData.price) <= 0) {
+    if (
+      Number(formData.price) <= 0 ||
+      !Number.isFinite(Number(formData.price))
+    ) {
       toast.error("Price must be greater than 0");
       return;
     }
@@ -169,13 +258,16 @@ const MyServicesPage = () => {
     try {
       setUpdating(true);
 
-      let imageUrl = formData.image;
+      // Upload new images to ImgBB
+      const uploadedImages = await Promise.all(
+        imageFiles.map((file) => uploadServiceImage(file))
+      );
 
-      // Upload new image to ImgBB
-      if (imageFile) {
-        toast.info("Uploading image...");
-        imageUrl = await uploadServiceImage(imageFile);
-      }
+      // Keep existing images and add new uploaded images
+      const finalImages = [
+        ...existingImages,
+        ...uploadedImages,
+      ];
 
       const updatedData = {
         serviceName: formData.serviceName.trim(),
@@ -183,7 +275,8 @@ const MyServicesPage = () => {
         description: formData.description.trim(),
         price: Number(formData.price),
         location: formData.location.trim(),
-        image: imageUrl,
+        image: finalImages[0] || "",
+        images: finalImages,
       };
 
       // Update MongoDB
@@ -200,12 +293,14 @@ const MyServicesPage = () => {
 
       toast.success("Service updated successfully!");
 
-      setIsEditModalOpen(false);
-      setSelectedService(null);
-      setImageFile(null);
+      resetEditModal();
     } catch (error) {
+      console.error("Update service error:", error);
+
       toast.error(
-        error instanceof Error ? error.message : "Failed to update service"
+        error instanceof Error
+          ? error.message
+          : "Failed to update service"
       );
     } finally {
       setUpdating(false);
@@ -237,7 +332,9 @@ const MyServicesPage = () => {
       setSelectedService(null);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to delete service"
+        error instanceof Error
+          ? error.message
+          : "Failed to delete service"
       );
     } finally {
       setDeletingId(null);
@@ -258,6 +355,7 @@ const MyServicesPage = () => {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
         <p className="text-[#8B7478]">Please sign in to continue.</p>
+
         <Link
           href="/sign-in"
           className="rounded-lg bg-[#722F3E] px-5 py-3 text-sm font-semibold text-white"
@@ -289,6 +387,7 @@ const MyServicesPage = () => {
             <h1 className="text-2xl font-bold text-[#4A1F2A] sm:text-3xl">
               My Services
             </h1>
+
             <p className="mt-2 text-sm text-[#8B7478]">
               Manage and update your wedding services
             </p>
@@ -311,6 +410,7 @@ const MyServicesPage = () => {
 
           <div>
             <p className="text-sm text-[#8B7478]">Total Services</p>
+
             <h2 className="text-2xl font-bold text-[#4A1F2A]">
               {services.length}
             </h2>
@@ -375,6 +475,7 @@ const MyServicesPage = () => {
                             <h3 className="font-semibold text-[#4A1F2A]">
                               {service.serviceName}
                             </h3>
+
                             <p className="mt-1 line-clamp-2 text-xs text-[#8B7478]">
                               {service.description}
                             </p>
@@ -403,8 +504,8 @@ const MyServicesPage = () => {
                             service.status === "approved"
                               ? "bg-green-100 text-green-700"
                               : service.status === "rejected"
-                              ? "bg-red-100 text-red-700"
-                              : "bg-yellow-100 text-yellow-700"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-yellow-100 text-yellow-700"
                           }`}
                         >
                           {service.status || "Pending"}
@@ -449,6 +550,7 @@ const MyServicesPage = () => {
                 <h2 className="text-xl font-bold text-[#4A1F2A]">
                   Update Service
                 </h2>
+
                 <p className="mt-1 text-sm text-[#8B7478]">
                   Edit your service information
                 </p>
@@ -456,10 +558,8 @@ const MyServicesPage = () => {
 
               <button
                 type="button"
-                onClick={() => {
-                  setIsEditModalOpen(false);
-                  setImageFile(null);
-                }}
+                onClick={resetEditModal}
+                disabled={updating}
                 className="rounded-lg p-2 text-[#8B7478] transition hover:bg-[#FAF5F0]"
               >
                 <X size={22} />
@@ -473,6 +573,7 @@ const MyServicesPage = () => {
                 <label className="mb-1.5 block text-sm font-semibold text-[#4A1F2A]">
                   Service Name
                 </label>
+
                 <input
                   type="text"
                   name="serviceName"
@@ -489,6 +590,7 @@ const MyServicesPage = () => {
                 <label className="mb-1.5 block text-sm font-semibold text-[#4A1F2A]">
                   Category
                 </label>
+
                 <select
                   name="category"
                   value={formData.category}
@@ -497,6 +599,7 @@ const MyServicesPage = () => {
                   className="w-full rounded-lg border border-[#E7D5CC] px-4 py-3 text-sm outline-none focus:border-[#722F3E]"
                 >
                   <option value="">Select Category</option>
+
                   {categories.map((category) => (
                     <option key={category} value={category}>
                       {category}
@@ -510,6 +613,7 @@ const MyServicesPage = () => {
                 <label className="mb-1.5 block text-sm font-semibold text-[#4A1F2A]">
                   Description
                 </label>
+
                 <textarea
                   name="description"
                   value={formData.description}
@@ -527,6 +631,7 @@ const MyServicesPage = () => {
                   <label className="mb-1.5 block text-sm font-semibold text-[#4A1F2A]">
                     Price ($)
                   </label>
+
                   <input
                     type="number"
                     name="price"
@@ -543,6 +648,7 @@ const MyServicesPage = () => {
                   <label className="mb-1.5 block text-sm font-semibold text-[#4A1F2A]">
                     Location
                   </label>
+
                   <input
                     type="text"
                     name="location"
@@ -555,47 +661,66 @@ const MyServicesPage = () => {
                 </div>
               </div>
 
-              {/* ImgBB Image Upload */}
+              {/* Multiple Image Upload - Maximum 4 */}
               <div>
-                <label className="mb-2 block text-sm font-semibold text-[#4A1F2A]">
-                  Service Image
+                <label className="mb-3 block text-sm font-semibold text-[#4A1F2A]">
+                  Service Images ({imagePreviews.length}/4)
                 </label>
 
-                {(imageFile || formData.image) && (
-                  <div className="mb-3">
-                    <img
-                      src={
-                        imageFile
-                          ? URL.createObjectURL(imageFile)
-                          : formData.image
-                      }
-                      alt="Service preview"
-                      className="h-44 w-full rounded-xl border border-[#E7D5CC] object-cover"
+                {/* Image Preview Grid */}
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {imagePreviews.map((image, index) => (
+                    <div key={`${image}-${index}`} className="relative">
+                      <img
+                        src={image}
+                        alt={`Service image ${index + 1}`}
+                        className="h-32 w-full rounded-xl border border-[#E7D5CC] object-cover"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveImage(index)}
+                        disabled={updating}
+                        className="absolute right-2 top-2 rounded-full bg-red-600 p-1.5 text-white shadow transition hover:bg-red-700"
+                      >
+                        <X size={15} />
+                      </button>
+
+                      {index === 0 && (
+                        <span className="absolute bottom-2 left-2 rounded-md bg-[#722F3E] px-2 py-1 text-xs text-white">
+                          Main
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add More Images */}
+                {imagePreviews.length < 4 && (
+                  <label className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#E7D5CC] bg-[#FAF5F0] p-6 text-center transition hover:border-[#722F3E]">
+                    <ImagePlus size={30} className="mb-2 text-[#722F3E]" />
+
+                    <span className="text-sm font-semibold text-[#4A1F2A]">
+                      Add More Images
+                    </span>
+
+                    <span className="mt-1 text-xs text-[#8B7478]">
+                      JPG, PNG or WEBP (Maximum 5MB each)
+                    </span>
+
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      multiple
+                      onChange={handleMultipleImageChange}
+                      disabled={updating}
+                      className="hidden"
                     />
-                  </div>
+                  </label>
                 )}
 
-                <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#E7D5CC] bg-[#FAF5F0] p-6 text-center transition hover:border-[#722F3E]">
-                  <ImagePlus size={30} className="mb-2 text-[#722F3E]" />
-
-                  <span className="text-sm font-semibold text-[#4A1F2A]">
-                    {imageFile ? imageFile.name : "Choose a new image"}
-                  </span>
-
-                  <span className="mt-1 text-xs text-[#8B7478]">
-                    JPG, PNG or WEBP (Maximum 5MB)
-                  </span>
-
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    onChange={handleImageChange}
-                    className="hidden"
-                  />
-                </label>
-
                 <p className="mt-2 text-xs text-[#8B7478]">
-                  Leave empty to keep the existing image.
+                  You can upload up to 4 images. Remove an image using the X button.
                 </p>
               </div>
 
@@ -603,10 +728,7 @@ const MyServicesPage = () => {
               <div className="flex flex-col-reverse justify-end gap-3 border-t border-[#E7D5CC] pt-4 sm:flex-row">
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsEditModalOpen(false);
-                    setImageFile(null);
-                  }}
+                  onClick={resetEditModal}
                   disabled={updating}
                   className="rounded-lg border border-[#E7D5CC] px-5 py-3 text-sm font-semibold text-[#4A1F2A] hover:bg-[#FAF5F0]"
                 >
@@ -623,6 +745,7 @@ const MyServicesPage = () => {
                   ) : (
                     <Save size={17} />
                   )}
+
                   {updating ? "Updating..." : "Save Changes"}
                 </button>
               </div>
@@ -678,6 +801,7 @@ const MyServicesPage = () => {
                 ) : (
                   <Trash2 size={17} />
                 )}
+
                 {deletingId !== null ? "Deleting..." : "Yes, Delete"}
               </button>
             </div>

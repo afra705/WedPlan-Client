@@ -1,6 +1,6 @@
+
 import { getSessionCookie } from "better-auth/cookies";
 import { NextResponse, type NextRequest } from "next/server";
-
 
 export function proxy(request: NextRequest) {
   const sessionCookie = getSessionCookie(request);
@@ -13,6 +13,20 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/vendor/:path*", "/customer/:path*", 
-    "/browse-services/:id"],
+  matcher: [
+    // Dashboard
+    "/admin/:path*",
+    "/vendor/:path*",
+    "/customer/:path*",
+
+    // Private Service Details
+    "/browse-services/:id",
+
+    // Profile Settings
+    "/profile/:path*",
+
+    // Payment
+    "/payment-success",
+    "/payment-cancel",
+  ],
 };
