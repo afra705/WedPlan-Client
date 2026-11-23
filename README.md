@@ -42,7 +42,7 @@ npm install
 Start the backend:
 
 ```bash
-npm run dev
+nodemon index.js
 ```
 
 Start the frontend in another terminal:
